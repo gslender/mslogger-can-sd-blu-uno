@@ -9,7 +9,7 @@
 #endif
 #include "Adafruit_TFTLCD.h"
 #include "TouchScreen.h"
-#include "SoftwareSerial.h"
+#include <SoftwareSerial.h>
 
 #define MINPRESSURE 400
 #define MAXPRESSURE 1000

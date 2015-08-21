@@ -14,7 +14,7 @@ public:
     
     GfxLabel();
     void create(Adafruit_TFTLCD* _tft, unsigned int _bgColour, unsigned int _fgColour);
-    void drawLabel(unsigned int _x, unsigned int _y, char _fntsize, char* text);
+    void drawLabel(unsigned int _x, unsigned int _y, char _fntsize, const char* text);
     
 protected:
     void prepDrawText(unsigned int _x, unsigned int _y, char _fntsize);

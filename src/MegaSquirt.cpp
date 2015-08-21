@@ -6,7 +6,7 @@ MegaSquirt::MegaSquirt() {
     usingNewSerial = false;
 }
 
-void MegaSquirt::setNewSerial(byte _usingNewSerial) {
+void MegaSquirt::setNewSerial(boolean _usingNewSerial) {
     usingNewSerial = _usingNewSerial;
     if (usingNewSerial)
         offset = 3;
@@ -74,14 +74,14 @@ float MegaSquirt::getPwp(){
 
 int MegaSquirt::requestData(){
     if (usingNewSerial)
-        return runCommand((byte []){0x0,0x1,0x41, 0xD3, 0xD9, 0x9E, 0x8B},7,data,170);
+        return runCommand((byte*)(const byte []){0x0,0x1,0x41, 0xD3, 0xD9, 0x9E, 0x8B},7,data,170);
     else
-        return runCommand((byte []){0x41},1,data,170);
+        return runCommand((byte*)(const byte []){0x41},1,data,170);
     
 }
 
 void MegaSquirt::requestSignature(){
-    int status=runCommand((byte []){'S'},1,data,59);
+    int status=runCommand((byte*)(const byte []){'S'},1,data,59);
 }
 
 //private

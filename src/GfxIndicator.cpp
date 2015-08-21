@@ -14,7 +14,7 @@ void GfxIndicator::create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y
     state = -1;
 }
 
-void GfxIndicator::setState(byte newstate, char* text, unsigned int fgColour, unsigned int bgColour)
+void GfxIndicator::setState(byte newstate, const char* text, unsigned int fgColour, unsigned int bgColour)
 {
     if (newstate != state)
     {

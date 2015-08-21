@@ -3,11 +3,11 @@
  basic graphics primitives (points, lines, circles, etc.). It needs
  to be paired with a hardware-specific library for each display
  device we carry (handling the lower-level functions).
- 
+
  Adafruit invests time and resources providing this open
  source code, please support Adafruit and open-source hardware
  by purchasing products from Adafruit!
- 
+
  Written by Limor Fried/Ladyada for Adafruit Industries.
  BSD license, check license.txt for more information.
  All text above must be included in any redistribution.
@@ -50,13 +50,13 @@ class Adafruit_GFX : public Print {
   virtual void invertDisplay(boolean i);
 
   // these are 'generic' drawing functions, so we can share them!
-  virtual void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, 
+  virtual void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1,
 		uint16_t color);
   virtual void drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color);
   virtual void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
-  virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, 
+  virtual void drawRect(int16_t x, int16_t y, int16_t w, int16_t h,
 		uint16_t color);
-  virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h, 
+  virtual void fillRect(int16_t x, int16_t y, int16_t w, int16_t h,
 		uint16_t color);
   virtual void fillScreen(uint16_t color);
 
@@ -76,7 +76,7 @@ class Adafruit_GFX : public Print {
   void fillRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h,
 		     int16_t radius, uint16_t color);
 
-  void drawBitmap(int16_t x, int16_t y, 
+  void drawBitmap(int16_t x, int16_t y,
 		  const uint8_t *bitmap, int16_t w, int16_t h,
 		  uint16_t color);
   void drawChar(int16_t x, int16_t y, unsigned char c,

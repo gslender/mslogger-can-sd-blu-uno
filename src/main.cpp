@@ -40,7 +40,7 @@ GfxDataField datafields[10];
 GfxIndicator engIndicator;
 GfxTextButton setupButton;
 GfxTextButton exitButton;
-long time = millis();
+unsigned long time = millis();
 byte rpmWarn;
 byte rpmLimit;
 byte tempScale;
