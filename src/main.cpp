@@ -25,6 +25,20 @@
 #define DATAFLD_ADV 8
 #define DATAFLD_PWP 9
 
+// Assign human-readable names to some common 16-bit color values:
+#define	BLACK   0x0000
+#define	DRKGRAY 0x2124
+#define	LTGRAY  0xBDD7
+#define	BLUE    0x001F
+#define	LTBLUE  0x94DF
+#define	RED     0xF800
+#define	GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
+
+
 // These are the pins for the TouchScreen
 #define YP A1  // must be an analog pin, use "An" notation!
 #define XM A2  // must be an analog pin, use "An" notation!
@@ -73,10 +87,10 @@ void drawMainScreen()
     {
         tft.fillRect(0, (yrow+18)+2*c*18, 320, 16, DRKGRAY);
     }
-    
+
     //DATAFIELDS
     datafields[DATAFLD_TMP].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_TMP].drawLabel(10,yrow,2,"Outside Temp:");
+    datafields[DATAFLD_TMP].drawLabel(10,yrow,2,String(F("Outside Temp:")).c_str());
     
     yrow +=18;
     datafields[DATAFLD_RPM].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
