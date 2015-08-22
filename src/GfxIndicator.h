@@ -15,7 +15,7 @@ public:
     
     GfxIndicator();
     void create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _fntsize);
-    void setState(byte state, const char* text, unsigned int fgColour, unsigned int bgColour);
+    void setState(byte newstate, unsigned int fgColour, unsigned int bgColour, const __FlashStringHelper *ifsh);
         
 private:
     Adafruit_TFTLCD* tft;

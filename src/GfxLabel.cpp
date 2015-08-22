@@ -20,8 +20,9 @@ void GfxLabel::prepDrawText(unsigned int _x, unsigned int _y, char _fntsize)
     tft->setTextColor(fgColour, bgColour);
 }
 
-void GfxLabel::drawLabel(unsigned int _x, unsigned int _y, char _fntsize, const char* text)
+void GfxLabel::drawLabel(unsigned int _x, unsigned int _y, char _fntsize, const __FlashStringHelper *ifsh)
 {
     prepDrawText(_x,_y,_fntsize);
-    tft->print(text);
+    tft->print(ifsh);
 }
+

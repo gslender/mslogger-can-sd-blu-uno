@@ -21,8 +21,6 @@ class MegaSquirt {
 public:
     
     MegaSquirt();
-    void setNewSerial(boolean _usingNewSerial);
-    boolean getNewSerial();
     void setDebug(SoftwareSerial* _debug);
     byte getEngine();
     unsigned int getRpm();
@@ -38,8 +36,6 @@ public:
     void requestSignature();
     
 private:
-    byte offset;
-    boolean usingNewSerial;
     SoftwareSerial* debug;
     byte data[400];
     int runCommand(byte cmd[], byte cmdLength,  byte data[], byte dataLength);

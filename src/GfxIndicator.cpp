@@ -14,10 +14,12 @@ void GfxIndicator::create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y
     state = -1;
 }
 
-void GfxIndicator::setState(byte newstate, const char* text, unsigned int fgColour, unsigned int bgColour)
+void GfxIndicator::setState(byte newstate, unsigned int fgColour, unsigned int bgColour, const __FlashStringHelper *ifsh)
 {
+	String s = String(ifsh);
     if (newstate != state)
     {
+    	const char* text = s.c_str();
         tft->fillRect(x, y,w,h, bgColour);  
         unsigned int x1 = x+(w-(strlen(text)*6*fntsize))/2;
         unsigned int y1 = y+(h-8*fntsize)/2;
