@@ -45,7 +45,7 @@ void TempSensor::OneWireOutByte (int Pin, byte d) // output byte d (least sig bi
 
 byte TempSensor::OneWireInByte (int Pin) // read byte, least sig byte first
 {
-  byte d, n, b;
+  byte d =0, n, b;
 
   for (n=0; n<8; n++)
   {
@@ -75,7 +75,7 @@ float TempSensor::getTempFloat ()
 
 int TempSensor::getTempInt100 ()
 {
-  int HighByte, LowByte, TReading, Tc_100, sign, whole, fract;
+  int HighByte, LowByte, TReading, Tc_100, sign;
 
   OneWireReset (REF_PIN);
   OneWireOutByte (REF_PIN, 0xcc);
@@ -98,8 +98,8 @@ int TempSensor::getTempInt100 ()
   
   return Tc_100;
 
-//  whole = Tc_100 / 100;  // separate off the whole and fractional portions
-//  fract = Tc_100 % 100;
+//  int whole = Tc_100 / 100;  // separate off the whole and fractional portions
+//  int fract = Tc_100 % 100;
 //
 //  if (sign) {
 //    temp[0] = '-';

@@ -2,7 +2,10 @@
 #include "GfxLabel.h"
 
 // Constructor
-GfxLabel::GfxLabel() {}
+GfxLabel::GfxLabel() {
+	tft = NULL;
+	fgColour = 0, bgColour = 0;
+}
 
 void GfxLabel::create(Adafruit_TFTLCD* _tft,unsigned int _bgColour, unsigned int _fgColour) {
     tft = _tft;

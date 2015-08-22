@@ -3,7 +3,10 @@
 
 
 // Constructor
-GfxArrowButton::GfxArrowButton() {}
+GfxArrowButton::GfxArrowButton() {
+
+    x1 = 0,y1 = 0,x2 = 0,y2 = 0,x3 = 0,y3 = 0;
+}
 
 void GfxArrowButton::create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _dir, unsigned int _fgColour, unsigned int _bgColour) {
     

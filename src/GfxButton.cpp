@@ -3,7 +3,10 @@
 
 
 // Constructor
-GfxButton::GfxButton() {}
+GfxButton::GfxButton() {
+	tft = NULL;
+	x = 0, y = 0, w = 0, h = 0, fgColour = 0, bgColour = 0, armed = false;
+}
 
 //void GfxButton::setDebug(SoftwareSerial* _debug)
 //{

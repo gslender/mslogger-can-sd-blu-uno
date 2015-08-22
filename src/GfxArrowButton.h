@@ -15,6 +15,7 @@ class GfxArrowButton : public GfxButton  {
 public:
     
     GfxArrowButton();
+    virtual ~GfxArrowButton() {};
     void create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _dir, unsigned int _fgColour, unsigned int _bgColour);
     void draw();
     void drawPressed();

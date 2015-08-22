@@ -24,6 +24,7 @@ class GfxButton {
 public:
     
     GfxButton();
+    virtual ~GfxButton() {};
     virtual void create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, unsigned int _fgColour, unsigned int _bgColour);
     virtual void draw();
     virtual void drawPressed();
@@ -34,10 +35,10 @@ public:
 protected:
 //    SoftwareSerial* debug;
     Adafruit_TFTLCD* tft;
-    unsigned int x;
-    unsigned int y;
-    unsigned int w;
-    unsigned int h;
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
     unsigned int fgColour;
     unsigned int bgColour;
     bool armed;
