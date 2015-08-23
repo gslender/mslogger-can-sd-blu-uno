@@ -14,6 +14,7 @@
 
 #include "Arduino.h"
 #include "SoftwareSerial.h"
+#include "debug.h"
 
 
 class MegaSquirt {

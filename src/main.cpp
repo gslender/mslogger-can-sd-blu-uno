@@ -1,5 +1,5 @@
 
-//#include "Arduino.h"
+#include "debug.h"
 
 #include "TempSensor.h"
 #include "MegaSquirt.h"
@@ -76,7 +76,8 @@ GfxLabel serialLabel;
 
 void drawMainScreen()
 {
-    debug->println(F(">> Main"));
+	DEBUG(F(">> Main"));
+    //debug->println(F(">> Main"));
     
     //STRIPES
     byte yrow = 30;
@@ -246,8 +247,8 @@ void setup()
     debug = new SoftwareSerial(2, 3); // RX, TX
     debug->begin(9600);
     megaSquirt.setDebug(debug);
-    
-    debug->println(F("ArdSquirt"));
+
+	DEBUG(F("megasquirt-lcd-duino"));
 
     tft.reset();
     
@@ -386,7 +387,7 @@ void dataCaptureLoop()
 
 void doSetup()
 {
-    debug->println(F(">> Setup"));
+	DEBUG(F(">> Setup"));
     tft.fillScreen(LTGRAY);
 
     drawLogo();
