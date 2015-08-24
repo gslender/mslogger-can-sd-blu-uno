@@ -11,6 +11,7 @@ D(SoftwareSerial* debugSerial;)
 #include "Adafruit_GFX.h"    // Core graphics library
 #include "Adafruit_TFTLCD.h" // Hardware-specific library
 #include "TouchScreen.h"
+#include "Adafruit_GPS.h" // Hardware-specific library
 #include <EEPROM.h>
 
 #define DATAFLD_TMP 0
@@ -46,6 +47,8 @@ D(SoftwareSerial* debugSerial;)
 
 Adafruit_TFTLCD tft;   // 320 x 240
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
+SoftwareSerial gpsSerial(3, 2);
+Adafruit_GPS gps(&gpsSerial);
 TempSensor tempSensor;
 MegaSquirt megaSquirt;
 GfxDataField datafields[10];
@@ -242,6 +245,20 @@ void setup()
     D(debugSerial = new SoftwareSerial(2, 3);)
     D(debugSerial->begin(9600);)
 	D(debugSerial->println(F("megasquirt-lcd-duino"));)
+
+	gps.begin(9600);
+    // turn on RMC (recommended minimum) and GGA (fix data) including altitude
+    gps.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+
+    // Set the update rate
+    gps.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);   // 5 Hz update rate
+    gps.sendCommand(PMTK_API_SET_FIX_CTL_5HZ);   // 5 Hz update rate
+    // Request updates on antenna status, comment out to keep quiet
+    // gps.sendCommand(PGCMD_ANTENNA);
+
+    // enable interrupts to capture gps reads
+    OCR0A = 0xAF;
+    TIMSK0 |= _BV(OCIE0A);
 
     tft.reset();
     
@@ -442,4 +459,20 @@ void loop()
     {
     	doSetup();
     }
+
+    if (gps.newNMEAreceived()) {
+
+       if (gps.parse(gps.lastNMEA())) {
+    	   gps.latitude_fixed;
+    	   gps.longitude_fixed;
+    	   gps.speed;
+    	   gps.angle;
+    	   gps.altitude;
+       }
+    }
+}
+
+// Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+SIGNAL(TIMER0_COMPA_vect) {
+ gps.read();
 }
