@@ -1,14 +1,11 @@
+#include "debug.h"
+
 #include "MegaSquirt.h"
 
 #define offset 3 // new serial protocol is offset by 3
 
 // Constructor
 MegaSquirt::MegaSquirt() {
-	debug = NULL;
-}
-
-void MegaSquirt::setDebug(SoftwareSerial* _debug) {
-	debug = _debug;
 }
 
 byte MegaSquirt::getEngine() {
@@ -102,13 +99,13 @@ int MegaSquirt::runCommand(byte cmd[], byte cmdLength, byte data[],
 
 	// If there is still data pending to be read, raise OVERFLOW error.
 	if (Serial.available() > 0 && counter >= dataLength) {
-		DEBUG(F("MS_ERR_COMM_OVERFLOW"));
+		D(debugSerial->println(F("MS_ERR_COMM_OVERFLOW"));)
 		return counter; //MS_ERR_COMM_OVERFLOW
 	}
 
 	// If the wrong amount of data was read, return timeout.
 	if (counter != dataLength) {
-		DEBUG(F("MS_ERR_COMM_TIMEOUT"));
+		D(debugSerial->println(F("MS_ERR_COMM_TIMEOUT"));)
 		return counter; //MS_ERR_COMM_TIMEOUT
 	}
 

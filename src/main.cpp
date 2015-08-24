@@ -1,5 +1,5 @@
-
 #include "debug.h"
+D(SoftwareSerial* debugSerial;)
 
 #include "TempSensor.h"
 #include "MegaSquirt.h"
@@ -11,7 +11,6 @@
 #include "Adafruit_GFX.h"    // Core graphics library
 #include "Adafruit_TFTLCD.h" // Hardware-specific library
 #include "TouchScreen.h"
-#include <SoftwareSerial.h>
 #include <EEPROM.h>
 
 #define DATAFLD_TMP 0
@@ -45,7 +44,6 @@
 #define YM 7   // can be a digital pin
 #define XP 6   // can be a digital pin
 
-SoftwareSerial* debug;
 Adafruit_TFTLCD tft;   // 320 x 240
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 TempSensor tempSensor;
@@ -76,8 +74,7 @@ GfxLabel serialLabel;
 
 void drawMainScreen()
 {
-	DEBUG(F(">> Main"));
-    //debug->println(F(">> Main"));
+	D(debugSerial->println(F(">> Main"));)
     
     //STRIPES
     byte yrow = 30;
@@ -132,7 +129,6 @@ void drawMainScreen()
     engIndicator.create(&tft, 0, yrow, 140, 24, 2);
     engIndicator.setState(0, DRKGRAY, LTGRAY, F("No ECU?"));
     
-//    setupButton.setDebug(debug);
     setupButton.create(&tft, 240, yrow, 80, 24, 2, F("SETUP"), BLACK, LTGRAY);
     setupButton.draw();
 }
@@ -178,8 +174,6 @@ bool setupLoop()
         if (rpmWarn != EEPROM.read(2)) EEPROM.write(2, rpmWarn);
         if (rpmLimit != EEPROM.read(3)) EEPROM.write(3, rpmLimit);
         if (tempScale != EEPROM.read(4)) EEPROM.write(4, tempScale);
-//        if (megaSquirt.getNewSerial() != EEPROM.read(5)) EEPROM.write(5, megaSquirt.getNewSerial());
-//        if (msOffset != EEPROM.read(5)) EEPROM.write(5, msOffset);
 
         tft.fillScreen(BLACK);
 
@@ -244,11 +238,10 @@ bool setupLoop()
 void setup()
 {
     Serial.begin(115200); //115200
-    debug = new SoftwareSerial(2, 3); // RX, TX
-    debug->begin(9600);
-    megaSquirt.setDebug(debug);
 
-	DEBUG(F("megasquirt-lcd-duino"));
+    D(debugSerial = new SoftwareSerial(2, 3);)
+    D(debugSerial->begin(9600);)
+	D(debugSerial->println(F("megasquirt-lcd-duino"));)
 
     tft.reset();
     
@@ -256,8 +249,8 @@ void setup()
     
     if(identifier != 0x9328)
     {
-        debug->print(F("Unknown LCD driver chip: "));
-        debug->println(identifier, HEX);
+    	D(debugSerial->print(F("Unknown LCD driver chip: "));)
+		D(debugSerial->println(identifier,HEX);)
     }
     
     tft.begin(identifier);
@@ -309,15 +302,15 @@ void dataCaptureLoop()
     if (tempScale == MS_FAHRENHEIT) {
         temp = (temp*1.8f) + 32;
     }
-//        debug->print(F("Temp: "));
-//        debug->println(temp);
+	D(debugSerial->print(F("Temp: "));)
+	D(debugSerial->println(temp);)
 
     datafields[DATAFLD_TMP].setValue(temp);
 
     if (megaSquirt.requestData() == 1)
     {
-//            debug->print(F("RPM: "));
-//            debug->println(megaSquirt.getRpm());
+    	D(debugSerial->print(F("RPM: "));)
+    	D(debugSerial->println(megaSquirt.getRpm());)
 
         unsigned int rpm = megaSquirt.getRpm();
 
@@ -380,14 +373,12 @@ void dataCaptureLoop()
             showRpmWarning = false;
             showRpmLimit = false;
         }
-
-//            debug->println(F("Megasquirt ??"));
     }
 }
 
 void doSetup()
 {
-	DEBUG(F(">> Setup"));
+	D(debugSerial->println(F("doSetup"));)
     tft.fillScreen(LTGRAY);
 
     drawLogo();
@@ -399,9 +390,6 @@ void doSetup()
     rpmWarnFld.create(&tft,225,35,2,1,LTGRAY,BLACK);
     rpmWarnFld.drawLabel(10,35,2,F("Warning RPM:"));
     rpmWarnFld.setValue(rpmWarn*100);
-
-//        rpmWarnUp.setDebug(debug);
-//        rpmWarnDn.setDebug(debug);
 
     rpmWarnUp.create(&tft,280,32, 25, 20, GFXARROW_UP, LTGRAY,BLACK);
     rpmWarnUp.draw();
@@ -419,8 +407,6 @@ void doSetup()
     tempScaleLabel.create(&tft,LTGRAY,BLACK);
     tempScaleLabel.drawLabel(10,95,2,F("Temp Scale:"));
 
-//        celsiusButton.setDebug(debug);
-//        fahrenheitButton.setDebug(debug);
     celsiusButton.create(&tft, 190, 90, 40, 24, 2, F("C"), LTGRAY, BLACK);
     fahrenheitButton.create(&tft, 260, 90, 40, 24, 2, F("F"), LTGRAY, BLACK);
 
@@ -432,10 +418,8 @@ void doSetup()
     celsiusButton.draw();
     fahrenheitButton.draw();
 
-//        exitButton.setDebug(debug);
     exitButton.create(&tft, 120, 212, 80, 24, 2, F("EXIT"), LTGRAY, BLACK);
     exitButton.draw();
-
 
     bool exit = false;
     while (!exit)

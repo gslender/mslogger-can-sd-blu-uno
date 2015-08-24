@@ -13,16 +13,12 @@
 #define MS_ENGINE_MAPACCDEN 128
 
 #include "Arduino.h"
-#include "SoftwareSerial.h"
-#include "debug.h"
-
 
 class MegaSquirt {
     
 public:
     
     MegaSquirt();
-    void setDebug(SoftwareSerial* _debug);
     byte getEngine();
     unsigned int getRpm();
     float getMap();
@@ -37,7 +33,6 @@ public:
     void requestSignature();
     
 private:
-    SoftwareSerial* debug;
     byte data[400];
     int runCommand(byte cmd[], byte cmdLength,  byte data[], byte dataLength);
 };

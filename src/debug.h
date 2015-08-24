@@ -1,12 +1,9 @@
-#ifndef DEBUG_H
-#define DEBUG_H
-
-#define ENABLE_DEBUG 1 // 1 to enable, 0 to disable
-
-#if ENABLE_DEBUG
-    #define DEBUG(args) debug->println(args)
+#define DEBUG // comment out this line to disable
+#ifdef DEBUG
+	#include <SoftwareSerial.h>
+	extern SoftwareSerial* debugSerial;
+	//// the following must be in an impl file  D(SoftwareSerial* debugSerial;)
+	#define D(x) x
 #else
-    #define DEBUG(...)
-#endif
-
+	#define D(x)
 #endif
