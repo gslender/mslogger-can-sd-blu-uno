@@ -10,9 +10,11 @@ D(SoftwareSerial* debugSerial;)
 
 #include "Adafruit_GFX.h"    // Core graphics library
 #include "Adafruit_TFTLCD.h" // Hardware-specific library
-#include "TouchScreen.h"
-#include "Adafruit_GPS.h" // Hardware-specific library
+#include "TouchScreen.h"	// Touch screen
+#include "Adafruit_GPS.h" // GPS library
+#include <SdFat.h>		// SD Card library
 #include <EEPROM.h>
+#include <SPI.h>
 
 #define DATAFLD_TMP 0
 #define DATAFLD_RPM 1
@@ -51,6 +53,9 @@ SoftwareSerial gpsSerial(3, 2);
 Adafruit_GPS gps(&gpsSerial);
 TempSensor tempSensor;
 MegaSquirt megaSquirt;
+SdFat sdcard;
+SdFile logfile;
+
 GfxDataField datafields[10];
 GfxIndicator engIndicator;
 GfxTextButton setupButton;
@@ -245,6 +250,10 @@ void setup()
     D(debugSerial = new SoftwareSerial(2, 3);)
     D(debugSerial->begin(9600);)
 	D(debugSerial->println(F("megasquirt-lcd-duino"));)
+
+	if (!sdcard.begin(SS, SPI_HALF_SPEED)) {
+		sdcard.initErrorHalt();
+	}
 
 	gps.begin(9600);
     // turn on RMC (recommended minimum) and GGA (fix data) including altitude
