@@ -1,31 +1,26 @@
-#include "debug.h"
-D(SoftwareSerial* debugSerial;)
-
-#include "TempSensor.h"
 #include "MegaSquirt.h"
 #include "GfxDataField.h"
 #include "GfxIndicator.h"
 #include "GfxTextButton.h"
-#include "GfxArrowButton.h"
 
 #include "Adafruit_GFX.h"    // Core graphics library
 #include "Adafruit_TFTLCD.h" // Hardware-specific library
 #include "TouchScreen.h"	// Touch screen
 #include "TinyGPS++.h" // GPS library
-#include "PetitFS.h"
-#include <EEPROM.h>
+#include <SdFat.h>		// SD Card library
 #include <SPI.h>
+#include "debug.h"
+D(SoftwareSerial* debugSerial;)
 
-#define DATAFLD_TMP 0
-#define DATAFLD_RPM 1
-#define DATAFLD_CLT 2
-#define DATAFLD_MAT 3
-#define DATAFLD_MAP 4
-#define DATAFLD_TPS 5
-#define DATAFLD_AFR 6
-#define DATAFLD_TAF 7
-#define DATAFLD_ADV 8
-#define DATAFLD_PWP 9
+#define DATAFLD_RPM 0
+#define DATAFLD_CLT 1
+#define DATAFLD_MAT 2
+#define DATAFLD_MAP 3
+#define DATAFLD_TPS 4
+#define DATAFLD_AFR 5
+#define DATAFLD_TAF 6
+#define DATAFLD_ADV 7
+#define DATAFLD_PWP 8
 
 // Assign human-readable names to some common 16-bit color values:
 #define	BLACK   0x0000
@@ -51,32 +46,21 @@ Adafruit_TFTLCD tft;   // 320 x 240
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 SoftwareSerial gpsSerial(3, 2);
 TinyGPSPlus gps;
-TempSensor tempSensor;
-MegaSquirt megaSquirt;
-FATFS logfile;
+SdFat sdcard;
+SdFile logfile;
 
 GfxDataField datafields[10];
 GfxIndicator engIndicator;
 GfxTextButton setupButton;
-GfxTextButton exitButton;
 unsigned long time = millis();
 byte rpmWarn;
 byte rpmLimit;
-byte tempScale;
+byte tempScale = MS_CELSIUS;
 byte flashtime;
 bool showRpmWarning = false;
 bool showRpmLimit = false;
 bool showLogo = true;
-GfxDataField rpmWarnFld;
-GfxDataField rpmLimitFld;
 GfxLabel tempScaleLabel;
-GfxTextButton celsiusButton;
-GfxTextButton fahrenheitButton;
-GfxArrowButton rpmWarnUp;
-GfxArrowButton rpmWarnDn;
-GfxArrowButton rpmLimitUp;
-GfxArrowButton rpmLimitDn;
-GfxLabel serialLabel;
 
 
 void drawMainScreen()
@@ -92,10 +76,6 @@ void drawMainScreen()
     }
 
     //DATAFIELDS
-    datafields[DATAFLD_TMP].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_TMP].drawLabel(10,yrow,2,F("Outside Temp:"));
-
-    yrow +=18;
     datafields[DATAFLD_RPM].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
     datafields[DATAFLD_RPM].drawLabel(10,yrow,2,F("Engine RPM:"));
     
@@ -170,76 +150,18 @@ void drawLimitRPM()
     tft.print(F("RPM LIMIT"));
 }
 
-
-bool setupLoop()
+int freeRam()
 {
-    Point p = ts.getPoint();
-    pinMode(XM, OUTPUT);
-    pinMode(YP, OUTPUT);
-    if (exitButton.isPressed(p))
-    {
-        if (rpmWarn != EEPROM.read(2)) EEPROM.write(2, rpmWarn);
-        if (rpmLimit != EEPROM.read(3)) EEPROM.write(3, rpmLimit);
-        if (tempScale != EEPROM.read(4)) EEPROM.write(4, tempScale);
+  extern int __heap_start,*__brkval;
+  int v;
+  return (int)&v - (__brkval == 0
+    ? (int)&__heap_start : (int) __brkval);
+}
 
-        tft.fillScreen(BLACK);
-
-        drawLogo();
-
-        drawMainScreen();
-        return true;
-    }
-
-
-    if (tempScale == MS_CELSIUS)
-    {
-        if (fahrenheitButton.isPressed(p))
-        {
-            tempScale = MS_FAHRENHEIT;
-            celsiusButton.swapColours();
-            fahrenheitButton.swapColours();
-            celsiusButton.draw();
-            fahrenheitButton.draw();
-        }
-    }
-    else
-    {
-        if (celsiusButton.isPressed(p))
-        {
-            tempScale = MS_CELSIUS;
-            celsiusButton.swapColours();
-            fahrenheitButton.swapColours();
-            celsiusButton.draw();
-            fahrenheitButton.draw();
-        }
-    }
-
-    
-    if (rpmWarnUp.isPressed(p))
-    {
-        rpmWarn++;
-        rpmWarnFld.setValue(rpmWarn*100);
-    }
-
-    if (rpmWarnDn.isPressed(p))
-    {
-        rpmWarn--;
-        rpmWarnFld.setValue(rpmWarn*100);
-    }
-    
-    if (rpmLimitUp.isPressed(p))
-    {
-        rpmLimit++;
-        rpmLimitFld.setValue(rpmLimit*100);
-    }
-    
-    if (rpmLimitDn.isPressed(p))
-    {
-        rpmLimit++;
-        rpmLimitFld.setValue(rpmLimit*100);
-    }
-    
-    return false;
+void display_freeram()
+{
+  Serial.print(F("-SRAM left="));
+  Serial.println(freeRam());
 }
 
 void setup()
@@ -250,9 +172,20 @@ void setup()
     D(debugSerial->begin(9600);)
 	D(debugSerial->println(F("mslogger-lcd-sd-blu-uno"));)
 
-//	if (!sdcard.begin(SS, SPI_HALF_SPEED)) {
-//		sdcard.initErrorHalt();
-//	}
+	if (sdcard.begin(SS, SPI_HALF_SPEED)) {
+
+		SdFile configFile;
+		// re-open the file for reading:
+		if (!configFile.open("test.txt", O_READ)) {
+		}
+		Serial.println("test.txt:");
+
+		// read from the file until there's nothing else in it:
+		int data;
+		while ((data = configFile.read()) > 0) Serial.write(data);
+		// close the file:
+		configFile.close();
+	}
 
 	gpsSerial.begin(9600);
     // turn on RMC (recommended minimum) and GGA (fix data) including altitude
@@ -282,24 +215,6 @@ void setup()
     tft.fillScreen(BLACK);
     
     drawLogo();
-    
-    byte ver1 = EEPROM.read(0);
-    byte ver2 = EEPROM.read(1);
-    
-    if (ver1 != 0xff || ver2 != 0x01)
-    {
-        EEPROM.write(0, 0xff);
-        EEPROM.write(1, 0x01);
-
-        EEPROM.write(2, 60);
-        EEPROM.write(3, 65);
-        EEPROM.write(4, MS_FAHRENHEIT);
-    }
-    
-    rpmWarn = EEPROM.read(2); // x100
-    rpmLimit = EEPROM.read(3); // x100
-    tempScale = EEPROM.read(4);
-    
     drawMainScreen();
     
     flashtime = 0;
@@ -319,16 +234,7 @@ void dataCaptureLoop()
             tft.fillRect(0, 0, 320, 25, BLACK);
         }
     }
-
-    float temp = (tempSensor.getTempInt100()+5)/10/10.0f;
-
-    if (tempScale == MS_FAHRENHEIT) {
-        temp = (temp*1.8f) + 32;
-    }
-	D(debugSerial->print(F("Temp: "));)
-	D(debugSerial->println(temp);)
-
-    datafields[DATAFLD_TMP].setValue(temp);
+    MegaSquirt megaSquirt;
 
     if (megaSquirt.requestData() == 1)
     {
@@ -399,58 +305,6 @@ void dataCaptureLoop()
     }
 }
 
-void doSetup()
-{
-	D(debugSerial->println(F("doSetup"));)
-    tft.fillScreen(LTGRAY);
-
-    drawLogo();
-
-
-    rpmWarnDn.create(&tft,190,32, 25, 20, GFXARROW_DOWN, LTGRAY,BLACK);
-    rpmWarnDn.draw();
-
-    rpmWarnFld.create(&tft,225,35,2,1,LTGRAY,BLACK);
-    rpmWarnFld.drawLabel(10,35,2,F("Warning RPM:"));
-    rpmWarnFld.setValue(rpmWarn*100);
-
-    rpmWarnUp.create(&tft,280,32, 25, 20, GFXARROW_UP, LTGRAY,BLACK);
-    rpmWarnUp.draw();
-
-    rpmLimitDn.create(&tft,190,62, 25, 20, GFXARROW_DOWN, LTGRAY,BLACK);
-    rpmLimitDn.draw();
-
-    rpmLimitFld.create(&tft,225,65,2,1,LTGRAY,BLACK);
-    rpmLimitFld.drawLabel(10,65,2,F("Limit RPM:"));
-    rpmLimitFld.setValue(rpmLimit*100);
-
-    rpmLimitUp.create(&tft,280,62, 25, 20, GFXARROW_UP, LTGRAY,BLACK);
-    rpmLimitUp.draw();
-
-    tempScaleLabel.create(&tft,LTGRAY,BLACK);
-    tempScaleLabel.drawLabel(10,95,2,F("Temp Scale:"));
-
-    celsiusButton.create(&tft, 190, 90, 40, 24, 2, F("C"), LTGRAY, BLACK);
-    fahrenheitButton.create(&tft, 260, 90, 40, 24, 2, F("F"), LTGRAY, BLACK);
-
-    if (tempScale == MS_CELSIUS)
-        celsiusButton.swapColours();
-    else
-        fahrenheitButton.swapColours();
-
-    celsiusButton.draw();
-    fahrenheitButton.draw();
-
-    exitButton.create(&tft, 120, 212, 80, 24, 2, F("EXIT"), LTGRAY, BLACK);
-    exitButton.draw();
-
-    bool exit = false;
-    while (!exit)
-    {
-        exit = setupLoop();
-    }
-}
-
 void loop()
 {
     if (millis() > time) {
@@ -463,7 +317,7 @@ void loop()
     pinMode(YP, OUTPUT);
     if (setupButton.isPressed(p))
     {
-    	doSetup();
+    	//TODO something?
     }
 
 //    if (gps.newNMEAreceived()) {
