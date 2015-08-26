@@ -5,9 +5,9 @@
 
 #include "Adafruit_GFX.h"    // Core graphics library
 #include "Adafruit_TFTLCD.h" // Hardware-specific library
-#include "TouchScreen.h"	// Touch screen
 #include "TinyGPS++.h" // GPS library
-#include <SdFat.h>		// SD Card library
+#include "SdFat.h"		// SD Card library
+#include <SoftwareSerial.h>
 #include <SPI.h>
 #include "debug.h"
 D(SoftwareSerial* debugSerial;)
@@ -18,9 +18,7 @@ D(SoftwareSerial* debugSerial;)
 #define DATAFLD_MAP 3
 #define DATAFLD_TPS 4
 #define DATAFLD_AFR 5
-#define DATAFLD_TAF 6
-#define DATAFLD_ADV 7
-#define DATAFLD_PWP 8
+#define DATAFLD_SPK 6
 
 // Assign human-readable names to some common 16-bit color values:
 #define	BLACK   0x0000
@@ -35,23 +33,16 @@ D(SoftwareSerial* debugSerial;)
 #define YELLOW  0xFFE0
 #define WHITE   0xFFFF
 
-
-// These are the pins for the TouchScreen
-#define YP A1  // must be an analog pin, use "An" notation!
-#define XM A2  // must be an analog pin, use "An" notation!
-#define YM 7   // can be a digital pin
-#define XP 6   // can be a digital pin
-
 Adafruit_TFTLCD tft;   // 320 x 240
-TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 SoftwareSerial gpsSerial(3, 2);
 TinyGPSPlus gps;
 SdFat sdcard;
 SdFile logfile;
 
-GfxDataField datafields[10];
+MegaSquirt megaSquirt;
+
+GfxDataField datafields[7];
 GfxIndicator engIndicator;
-GfxTextButton setupButton;
 unsigned long time = millis();
 byte rpmWarn;
 byte rpmLimit;
@@ -60,8 +51,6 @@ byte flashtime;
 bool showRpmWarning = false;
 bool showRpmLimit = false;
 bool showLogo = true;
-GfxLabel tempScaleLabel;
-
 
 void drawMainScreen()
 {
@@ -77,56 +66,37 @@ void drawMainScreen()
 
     //DATAFIELDS
     datafields[DATAFLD_RPM].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_RPM].drawLabel(10,yrow,2,F("Engine RPM:"));
+    datafields[DATAFLD_RPM].drawLabel(10,yrow,2,F("RPM:"));
     
     yrow +=18;
     datafields[DATAFLD_CLT].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_CLT].drawLabel(10,yrow,2,F("Coolant Temp:"));
+    datafields[DATAFLD_CLT].drawLabel(10,yrow,2,F("CLT:"));
     
     yrow +=18;
     datafields[DATAFLD_MAT].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_MAT].drawLabel(10,yrow,2,F("Manifold Temp:"));
+    datafields[DATAFLD_MAT].drawLabel(10,yrow,2,F("MAT:"));
     
     yrow +=18;
     datafields[DATAFLD_MAP].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_MAP].drawLabel(10,yrow,2,F("Manifold kPa:"));
+    datafields[DATAFLD_MAP].drawLabel(10,yrow,2,F("MAP:"));
     
     yrow +=18;
     datafields[DATAFLD_TPS].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_TPS].drawLabel(10,yrow,2,F("Throttle Pos:"));
+    datafields[DATAFLD_TPS].drawLabel(10,yrow,2,F("TPS:"));
     
     yrow +=18;
     datafields[DATAFLD_AFR].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_AFR].drawLabel(10,yrow,2,F("O2 / AFR:"));
-    
-    yrow +=18;
-    datafields[DATAFLD_TAF].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_TAF].drawLabel(10,yrow,2,F("Target AFR:"));
-    
-    yrow +=18;
-    datafields[DATAFLD_ADV].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_ADV].drawLabel(10,yrow,2,F("Spark Adv:"));
-    
-    yrow +=18;
-    datafields[DATAFLD_PWP].create(&tft,230,yrow,2,3,DRKGRAY,WHITE);
-    datafields[DATAFLD_PWP].drawLabel(10,yrow,2,F("Pulse Width:"));
+    datafields[DATAFLD_AFR].drawLabel(10,yrow,2,F("AFR:"));
     
     //INDICATORS / BUTTONS
     yrow +=20;
     engIndicator.create(&tft, 0, yrow, 140, 24, 2);
-    engIndicator.setState(0, DRKGRAY, LTGRAY, F("No ECU?"));
-    
-    setupButton.create(&tft, 240, yrow, 80, 24, 2, F("SETUP"), BLACK, LTGRAY);
-    setupButton.draw();
+    engIndicator.setState(0, DRKGRAY, LTGRAY, F("ECU?"));
 }
 
 void drawLogo()
 {
     tft.fillRect(0, 0, 320, 25, LTBLUE);
-    tft.setCursor(75,4);
-    tft.setTextSize(2);
-    tft.setTextColor(LTGRAY);
-    tft.print(F("RednelsRacing"));
     tft.setCursor(76,5);
     tft.setTextColor(BLACK);
     tft.print(F("RednelsRacing"));
@@ -160,13 +130,13 @@ int freeRam()
 
 void display_freeram()
 {
-  Serial.print(F("-SRAM left="));
-  Serial.println(freeRam());
+//	MinimumSerial.print(F("-SRAM left="));
+//	MinimumSerial.println(freeRam());
 }
 
 void setup()
 {
-    Serial.begin(115200); //115200
+	Serial.begin(115200); //115200
 
     D(debugSerial = new SoftwareSerial(2, 3);)
     D(debugSerial->begin(9600);)
@@ -178,11 +148,13 @@ void setup()
 		// re-open the file for reading:
 		if (!configFile.open("test.txt", O_READ)) {
 		}
-		Serial.println("test.txt:");
+//		Serial.println("test.txt:");
 
 		// read from the file until there's nothing else in it:
 		int data;
-		while ((data = configFile.read()) > 0) Serial.write(data);
+		while ((data = configFile.read()) > 0) {
+			//Serial.write(data);
+		}
 		// close the file:
 		configFile.close();
 	}
@@ -195,9 +167,11 @@ void setup()
     //gps.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);   // 5 Hz update rate
     //gps.sendCommand(PMTK_API_SET_FIX_CTL_5HZ);   // 5 Hz update rate
 
-    // enable interrupts to capture gps reads
+    // enable interrupts to capture serial reads (for gps / megasquirt etc)
+	cli();//stop interrupts
     OCR0A = 0xAF;
     TIMSK0 |= _BV(OCIE0A);
+    sei();//allow interrupts
 
     tft.reset();
     
@@ -234,7 +208,6 @@ void dataCaptureLoop()
             tft.fillRect(0, 0, 320, 25, BLACK);
         }
     }
-    MegaSquirt megaSquirt;
 
     if (megaSquirt.requestData() == 1)
     {
@@ -273,9 +246,7 @@ void dataCaptureLoop()
         datafields[DATAFLD_MAP].setValue(megaSquirt.getMap());
         datafields[DATAFLD_TPS].setValue(megaSquirt.getTps());
         datafields[DATAFLD_AFR].setValue(megaSquirt.getAfr());
-        datafields[DATAFLD_TAF].setValue(megaSquirt.getTaf());
-        datafields[DATAFLD_ADV].setValue(megaSquirt.getAdv());
-        datafields[DATAFLD_PWP].setValue(megaSquirt.getPwp());
+        datafields[DATAFLD_SPK].setValue(megaSquirt.getSpk());
 
         if (megaSquirt.getEngine() & MS_ENGINE_READY)
         {
@@ -312,14 +283,6 @@ void loop()
     	dataCaptureLoop();
     }
 
-    Point p = ts.getPoint();
-    pinMode(XM, OUTPUT);
-    pinMode(YP, OUTPUT);
-    if (setupButton.isPressed(p))
-    {
-    	//TODO something?
-    }
-
 //    if (gps.newNMEAreceived()) {
 //
 //       if (gps.parse(gps.lastNMEA())) {
@@ -333,6 +296,8 @@ void loop()
 }
 
 // Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+// at 9600 this is roughly 1 byte or more per interrupt
+// at 115200 this is nearly 15 bytes or more per interrupt
 SIGNAL(TIMER0_COMPA_vect) {
 	 while (gpsSerial.available() > 0)
 	    gps.encode(gpsSerial.read());

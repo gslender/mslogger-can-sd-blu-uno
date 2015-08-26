@@ -46,7 +46,7 @@ float MegaSquirt::getTaf() {
 	return data[offset + 12] * 0.1f;
 }
 
-float MegaSquirt::getAdv() {
+float MegaSquirt::getSpk() {
 	return ((data[offset + 8] << 8) | data[offset + 9]) * 0.1f;
 }
 

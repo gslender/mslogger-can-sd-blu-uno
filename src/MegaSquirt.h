@@ -27,7 +27,7 @@ public:
     float getTps();
     float getAfr();
     float getTaf();
-    float getAdv();
+    float getSpk();
     float getPwp();
     int requestData();
     void requestSignature();
