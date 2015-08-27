@@ -6,11 +6,14 @@
 #include "Adafruit_GFX.h"    // Core graphics library
 #include "Adafruit_TFTLCD.h" // Hardware-specific library
 #include "TinyGPS++.h" // GPS library
-#include "SdFat.h"		// SD Card library
+#include "SD.h"		// SD Card library
+#define SD_CS 5 // Card select for shield use
 #include <SoftwareSerial.h>
 #include <SPI.h>
+#define DEBUG // comment out to en/disable
+#define DEBUG_USE_SOFTSERIAL
 #include "debug.h"
-D(SoftwareSerial* debugSerial;)
+D(SoftwareSerial debugSerial(2,3);)
 
 #define DATAFLD_RPM 0
 #define DATAFLD_CLT 1
@@ -19,6 +22,7 @@ D(SoftwareSerial* debugSerial;)
 #define DATAFLD_TPS 4
 #define DATAFLD_AFR 5
 #define DATAFLD_SPK 6
+#define MAX_DATAFLDS 7
 
 // Assign human-readable names to some common 16-bit color values:
 #define	BLACK   0x0000
@@ -34,14 +38,15 @@ D(SoftwareSerial* debugSerial;)
 #define WHITE   0xFFFF
 
 Adafruit_TFTLCD tft;   // 320 x 240
-SoftwareSerial gpsSerial(3, 2);
+uint8_t 	tft_spi_save;
+uint8_t     sd_spi_save;
+SoftwareSerial gpsSerial(3, 4);
 TinyGPSPlus gps;
-SdFat sdcard;
-SdFile logfile;
+File logfile;
 
 MegaSquirt megaSquirt;
 
-GfxDataField datafields[7];
+GfxDataField datafields[MAX_DATAFLDS];
 GfxIndicator engIndicator;
 unsigned long time = millis();
 byte rpmWarn;
@@ -54,7 +59,7 @@ bool showLogo = true;
 
 void drawMainScreen()
 {
-	D(debugSerial->println(F(">> Main"));)
+	D(debugSerial.println(F(">> Main"));)
     
     //STRIPES
     byte yrow = 30;
@@ -88,6 +93,10 @@ void drawMainScreen()
     datafields[DATAFLD_AFR].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
     datafields[DATAFLD_AFR].drawLabel(10,yrow,2,F("AFR:"));
     
+    yrow +=18;
+    datafields[DATAFLD_SPK].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
+    datafields[DATAFLD_SPK].drawLabel(10,yrow,2,F("SPK:"));
+
     //INDICATORS / BUTTONS
     yrow +=20;
     engIndicator.create(&tft, 0, yrow, 140, 24, 2);
@@ -97,9 +106,18 @@ void drawMainScreen()
 void drawLogo()
 {
     tft.fillRect(0, 0, 320, 25, LTBLUE);
+    tft.setTextSize(2);
     tft.setCursor(76,5);
     tft.setTextColor(BLACK);
     tft.print(F("RednelsRacing"));
+}
+
+void drawError(const __FlashStringHelper *ifsh)
+{
+    tft.setTextSize(5);
+    tft.setCursor(30,60);
+    tft.setTextColor(RED);
+    tft.print(ifsh);
 }
 
 void drawWarnRPM()
@@ -136,12 +154,48 @@ void display_freeram()
 
 void setup()
 {
-	Serial.begin(115200); //115200
+	Serial.begin(115200); //115200 pins 0, 1
 
-    D(debugSerial = new SoftwareSerial(2, 3);)
-    D(debugSerial->begin(9600);)
-	D(debugSerial->println(F("mslogger-lcd-sd-blu-uno"));)
+    D(debugSerial.begin(9600);)
+	D(debugSerial.println(F("mslogger-lcd-sd-blu-uno"));)
 
+    tft.reset();
+
+    uint16_t identifier = tft.readID();
+
+    if(identifier != 0x9328)
+    {
+    	D(debugSerial.print(F("Unknown LCD driver chip: "));)
+		D(debugSerial.println(identifier,HEX);)
+    }
+
+    tft.begin(identifier);
+    tft_spi_save = SPCR;
+
+    tft.setRotation(3);
+
+    tft.fillScreen(BLACK);
+
+    drawLogo();
+
+
+    if (!SD.begin(SD_CS)) {
+    	drawError(F("SD CARD INIT FAILED!"));
+    }
+    sd_spi_save = SPCR;
+
+    SPCR   = tft_spi_save;
+
+/*
+	// open the file. note that only one file can be open at a time,
+	// so you have to close this one before opening another.
+	File configFile = SD.open("config.txt");
+	// if the file opened okay, write to it:
+	if (configFile) {
+	} else {
+	// no card just display stuff (no logging)
+	}
+/*
 	if (sdcard.begin(SS, SPI_HALF_SPEED)) {
 
 		SdFile configFile;
@@ -158,6 +212,7 @@ void setup()
 		// close the file:
 		configFile.close();
 	}
+	*/
 
 	gpsSerial.begin(9600);
     // turn on RMC (recommended minimum) and GGA (fix data) including altitude
@@ -173,22 +228,6 @@ void setup()
     TIMSK0 |= _BV(OCIE0A);
     sei();//allow interrupts
 
-    tft.reset();
-    
-    uint16_t identifier = tft.readID();
-    
-    if(identifier != 0x9328)
-    {
-    	D(debugSerial->print(F("Unknown LCD driver chip: "));)
-		D(debugSerial->println(identifier,HEX);)
-    }
-    
-    tft.begin(identifier);
-    tft.setRotation(3);
-    
-    tft.fillScreen(BLACK);
-    
-    drawLogo();
     drawMainScreen();
     
     flashtime = 0;
@@ -208,7 +247,7 @@ void dataCaptureLoop()
             tft.fillRect(0, 0, 320, 25, BLACK);
         }
     }
-
+/*
     if (megaSquirt.requestData() == 1)
     {
     	D(debugSerial->print(F("RPM: "));)
@@ -261,7 +300,7 @@ void dataCaptureLoop()
     else
     {
         byte c;
-        for (c=1; c<10;c++)
+        for (c=1; c<MAX_DATAFLDS;c++)
         {
             datafields[c].setUnknown();
         }
@@ -273,7 +312,7 @@ void dataCaptureLoop()
             showRpmWarning = false;
             showRpmLimit = false;
         }
-    }
+    }*/
 }
 
 void loop()
