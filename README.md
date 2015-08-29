@@ -1,6 +1,6 @@
 # mslogger-lcd-sd-blu-uno
 
-An Arduino ATmega328P microcontroller application that logs Megasquirt (via Serial) and GPS data (via Bluetooth). Plan is to use LCD shield 16x2 Character Display plus keypad pins to provide limitted displayed information and control of the display, Bluetooth and logging functions.
+An Arduino ATmega328P microcontroller application that logs Megasquirt (via Serial) and GPS data (via Bluetooth) with a 1.8" 18-bit Color TFT Shield w/microSD and Joystick to provide limitted displayed information and control of the display, Bluetooth pair and logging functions.
 
 Project is built using Platformio's code builder - see http://platformio.org/ and I'm using Eclipse as the IDE
 
