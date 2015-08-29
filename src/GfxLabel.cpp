@@ -7,7 +7,7 @@ GfxLabel::GfxLabel() {
 	fgColour = 0, bgColour = 0;
 }
 
-void GfxLabel::create(Adafruit_TFTLCD* _tft,unsigned int _bgColour, unsigned int _fgColour) {
+void GfxLabel::create(Adafruit_GFX* _tft,unsigned int _bgColour, unsigned int _fgColour) {
     tft = _tft;
     bgColour = _bgColour;
     fgColour = _fgColour;

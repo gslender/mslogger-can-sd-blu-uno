@@ -4,7 +4,7 @@
 // Constructor
 GfxIndicator::GfxIndicator() {}
 
-void GfxIndicator::create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _fntsize) {
+void GfxIndicator::create(Adafruit_GFX* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _fntsize) {
     tft = _tft;
     x = _x;
     y = _y;

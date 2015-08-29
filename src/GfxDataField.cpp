@@ -4,7 +4,7 @@
 // Constructor
 GfxDataField::GfxDataField() {}
 
-void GfxDataField::create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, char _fntsize, char _place, unsigned int _bgColour, unsigned int _fgColour) {
+void GfxDataField::create(Adafruit_GFX* _tft,unsigned int _x, unsigned int _y, char _fntsize, char _place, unsigned int _bgColour, unsigned int _fgColour) {
     
     GfxLabel::create(_tft, _bgColour, _fgColour);
     x = _x;

@@ -9,7 +9,7 @@ GfxButton::GfxButton() {
 	x = 0, y = 0, w = 0, h = 0, fgColour = 0, bgColour = 0, armed = false;
 }
 
-void GfxButton::create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, unsigned int _fgColour, unsigned int _bgColour) {
+void GfxButton::create(Adafruit_GFX* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, unsigned int _fgColour, unsigned int _bgColour) {
     tft = _tft;
     x = _x;
     y = _y;
@@ -36,9 +36,10 @@ void GfxButton::drawPressed()
 {
     tft->fillRoundRect(x, y, w, h, 4, bgColour);
 }
+/*
 
 bool GfxButton::isPressed(Point p)
-{    
+{
     // TouchScreen doesn't follow TFT orientation nor dimensions
     int p_x = p.x;
     p.x = map(p.y, TS_MINY, TS_MAXY, 0, tft->width());
@@ -70,3 +71,4 @@ bool GfxButton::isPressed(Point p)
     }
     return false;
 }
+*/

@@ -4,7 +4,7 @@
 #include "GfxTextButton.h"
 
 #include "Adafruit_GFX.h"    // Core graphics library
-#include "Adafruit_TFTLCD.h" // Hardware-specific library
+#include <Adafruit_ST7735.h> // Hardware-specific library
 #include "TinyGPS++.h" // GPS library
 #include "SD.h"		// SD Card library
 #define SD_CS 5 // Card select for shield use
@@ -37,7 +37,12 @@ D(SoftwareSerial debugSerial(2,3);)
 #define YELLOW  0xFFE0
 #define WHITE   0xFFFF
 
-Adafruit_TFTLCD tft;   // 320 x 240
+#define TFT_CS     10
+#define TFT_RST    9  // you can also connect this to the Arduino reset
+                      // in which case, set this #define pin to 0!
+#define TFT_DC     8
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
+//Adafruit_TFTLCD tft;   // 320 x 240
 uint8_t 	tft_spi_save;
 uint8_t     sd_spi_save;
 SoftwareSerial gpsSerial(3, 4);
@@ -60,7 +65,7 @@ bool showLogo = true;
 void drawMainScreen()
 {
 	D(debugSerial.println(F(">> Main"));)
-    
+
     //STRIPES
     byte yrow = 30;
     byte c;
@@ -72,27 +77,27 @@ void drawMainScreen()
     //DATAFIELDS
     datafields[DATAFLD_RPM].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
     datafields[DATAFLD_RPM].drawLabel(10,yrow,2,F("RPM:"));
-    
+
     yrow +=18;
     datafields[DATAFLD_CLT].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
     datafields[DATAFLD_CLT].drawLabel(10,yrow,2,F("CLT:"));
-    
+
     yrow +=18;
     datafields[DATAFLD_MAT].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
     datafields[DATAFLD_MAT].drawLabel(10,yrow,2,F("MAT:"));
-    
+
     yrow +=18;
     datafields[DATAFLD_MAP].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
     datafields[DATAFLD_MAP].drawLabel(10,yrow,2,F("MAP:"));
-    
+
     yrow +=18;
     datafields[DATAFLD_TPS].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
     datafields[DATAFLD_TPS].drawLabel(10,yrow,2,F("TPS:"));
-    
+
     yrow +=18;
     datafields[DATAFLD_AFR].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
     datafields[DATAFLD_AFR].drawLabel(10,yrow,2,F("AFR:"));
-    
+
     yrow +=18;
     datafields[DATAFLD_SPK].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
     datafields[DATAFLD_SPK].drawLabel(10,yrow,2,F("SPK:"));
@@ -152,25 +157,26 @@ void display_freeram()
 //	MinimumSerial.println(freeRam());
 }
 
-void setup()
-{
+void setup() {
 	Serial.begin(115200); //115200 pins 0, 1
 
     D(debugSerial.begin(9600);)
 	D(debugSerial.println(F("mslogger-lcd-sd-blu-uno"));)
 
-    tft.reset();
+	tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
 
-    uint16_t identifier = tft.readID();
-
-    if(identifier != 0x9328)
-    {
-    	D(debugSerial.print(F("Unknown LCD driver chip: "));)
-		D(debugSerial.println(identifier,HEX);)
-    }
-
-    tft.begin(identifier);
-    tft_spi_save = SPCR;
+//    tft.reset();
+//
+//    uint16_t identifier = tft.readID();
+//
+//    if(identifier != 0x9328)
+//    {
+//    	D(debugSerial.print(F("Unknown LCD driver chip: "));)
+//		D(debugSerial.println(identifier,HEX);)
+//    }
+//
+//    tft.begin(identifier);
+//    tft_spi_save = SPCR;
 
     tft.setRotation(3);
 
@@ -229,7 +235,7 @@ void setup()
     sei();//allow interrupts
 
     drawMainScreen();
-    
+
     flashtime = 0;
 }
 

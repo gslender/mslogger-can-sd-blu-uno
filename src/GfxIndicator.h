@@ -7,18 +7,18 @@
 #else
 #include "WProgram.h"
 #endif
-#include "Adafruit_TFTLCD.h"
+#include "Adafruit_GFX.h"
 
 class GfxIndicator {
     
 public:
     
     GfxIndicator();
-    void create(Adafruit_TFTLCD* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _fntsize);
+    void create(Adafruit_GFX* _tft,unsigned int _x, unsigned int _y, unsigned int _w, unsigned int _h, byte _fntsize);
     void setState(byte newstate, unsigned int fgColour, unsigned int bgColour, const __FlashStringHelper *ifsh);
         
 private:
-    Adafruit_TFTLCD* tft;
+    Adafruit_GFX* tft;
     unsigned int x;
     unsigned int y;
     unsigned int w;
