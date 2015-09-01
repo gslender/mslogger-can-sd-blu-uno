@@ -1,51 +1,8 @@
-#include "MegaSquirt.h"
-#include "GfxDataField.h"
-#include "GfxIndicator.h"
-#include "GfxTextButton.h"
+#include "main.h"
 
-#include "Adafruit_GFX.h"    // Core graphics library
-#include <Adafruit_ST7735.h> // Hardware-specific library
-#include "TinyGPS++.h" // GPS library
-#include "SD.h"		// SD Card library
-#define SD_CS 5 // Card select for shield use
-#include <SoftwareSerial.h>
-#include <SPI.h>
-#define DEBUG // comment out to en/disable
-#define DEBUG_USE_SOFTSERIAL
-#include "debug.h"
-D(SoftwareSerial debugSerial(2,3);)
-
-#define DATAFLD_RPM 0
-#define DATAFLD_CLT 1
-#define DATAFLD_MAT 2
-#define DATAFLD_MAP 3
-#define DATAFLD_TPS 4
-#define DATAFLD_AFR 5
-#define DATAFLD_SPK 6
-#define MAX_DATAFLDS 7
-
-// Assign human-readable names to some common 16-bit color values:
-#define	BLACK   0x0000
-#define	DRKGRAY 0x2124
-#define	LTGRAY  0xBDD7
-#define	BLUE    0x001F
-#define	LTBLUE  0x94DF
-#define	RED     0xF800
-#define	GREEN   0x07E0
-#define CYAN    0x07FF
-#define MAGENTA 0xF81F
-#define YELLOW  0xFFE0
-#define WHITE   0xFFFF
-
-#define TFT_CS     10
-#define TFT_RST    9  // you can also connect this to the Arduino reset
-                      // in which case, set this #define pin to 0!
-#define TFT_DC     8
 Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS,  TFT_DC, TFT_RST);
-//Adafruit_TFTLCD tft;   // 320 x 240
-uint8_t 	tft_spi_save;
-uint8_t     sd_spi_save;
-SoftwareSerial gpsSerial(3, 4);
+SoftwareSerial bt_serial(6, 5);
+Bluetooth_HC05 blumod(bt_serial);
 TinyGPSPlus gps;
 File logfile;
 
@@ -61,6 +18,201 @@ byte flashtime;
 bool showRpmWarning = false;
 bool showRpmLimit = false;
 bool showLogo = true;
+
+void setup() {
+	Serial.begin(115200); //115200 pins 0, 1
+
+    D(debugSerial.begin(9600);)
+	D(debugSerial.println(F("mslogger-lcd-sd-blu-uno"));)
+
+	tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
+
+//    tft.reset();
+//
+//    uint16_t identifier = tft.readID();
+//
+//    if(identifier != 0x9328)
+//    {
+//    	D(debugSerial.print(F("Unknown LCD driver chip: "));)
+//		D(debugSerial.println(identifier,HEX);)
+//    }
+//
+//    tft.begin(identifier);
+//    tft_spi_save = SPCR;
+
+    tft.setRotation(3);
+
+    tft.fillScreen(BLACK);
+
+    drawLogo();
+
+
+    if (!SD.begin(SD_CS)) {
+    	drawError(F("SD CARD INIT FAILED!"));
+    }
+
+/*
+	// open the file. note that only one file can be open at a time,
+	// so you have to close this one before opening another.
+	File configFile = SD.open("config.txt");
+	// if the file opened okay, write to it:
+	if (configFile) {
+	} else {
+	// no card just display stuff (no logging)
+	}
+/*
+	if (sdcard.begin(SS, SPI_HALF_SPEED)) {
+
+		SdFile configFile;
+		// re-open the file for reading:
+		if (!configFile.open("test.txt", O_READ)) {
+		}
+//		Serial.println("test.txt:");
+
+		// read from the file until there's nothing else in it:
+		int data;
+		while ((data = configFile.read()) > 0) {
+			//Serial.write(data);
+		}
+		// close the file:
+		configFile.close();
+	}
+	*/
+
+	blumod.begin(38400, 7, HC05_MODE_COMMAND);
+	blumod.setRole(HC05_ROLE_MASTER);
+	blumod.setPassword("0000");
+	blumod.initSerialPortProfile();
+	blumod.inquire(NULL,10000);
+	BluetoothAddress qstarz818 = { 0x00, 0x11, 0x04, 0x29, 0x02, 0x55 };
+	blumod.connect(qstarz818);
+//	gpsSerial.begin(9600);
+    // turn on RMC (recommended minimum) and GGA (fix data) including altitude
+    //gps.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+
+    // Set the update rate
+    //gps.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);   // 5 Hz update rate
+    //gps.sendCommand(PMTK_API_SET_FIX_CTL_5HZ);   // 5 Hz update rate
+
+    // enable interrupts to capture serial reads (for gps / megasquirt etc)
+	cli();//stop interrupts
+    OCR0A = 0xAF;
+    TIMSK0 |= _BV(OCIE0A);
+    sei();//allow interrupts
+
+    drawMainScreen();
+
+    flashtime = 0;
+}
+
+void loop()
+{
+    if (millis() > time) {
+        time = millis()+100;
+    	dataCaptureLoop();
+    }
+
+//    if (gps.newNMEAreceived()) {
+//
+//       if (gps.parse(gps.lastNMEA())) {
+//    	   gps.latitude_fixed;
+//    	   gps.longitude_fixed;
+//    	   gps.speed;
+//    	   gps.angle;
+//    	   gps.altitude;
+//       }
+//    }
+}
+
+// Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+// at 9600 this is roughly 1 byte or more per interrupt
+// at 115200 this is nearly 15 bytes or more per interrupt
+SIGNAL(TIMER0_COMPA_vect) {
+//	 while (gpsSerial.available() > 0)
+//	    gps.encode(gpsSerial.read());
+}
+
+void dataCaptureLoop()
+{
+    flashtime++;
+    if (showRpmWarning)
+    {
+        if (flashtime % 2)
+        {
+            drawWarnRPM();
+        }
+        else
+        {
+            tft.fillRect(0, 0, 320, 25, BLACK);
+        }
+    }
+/*
+    if (megaSquirt.requestData() == 1)
+    {
+    	D(debugSerial->print(F("RPM: "));)
+    	D(debugSerial->println(megaSquirt.getRpm());)
+
+        unsigned int rpm = megaSquirt.getRpm();
+
+        if ((rpm/100) >= rpmWarn && (rpm/100) < rpmLimit)
+        {
+            showRpmWarning = true;
+            showRpmLimit = false;
+            showLogo = false;
+        }
+        else if ((rpm/100) >= rpmLimit)
+        {
+            if (!showRpmLimit)
+            {
+                showRpmLimit = true;
+                showRpmWarning = false;
+                showLogo = false;
+                drawLimitRPM();
+            }
+        }
+        else if (!showLogo)
+        {
+            drawLogo();
+            showLogo = true;
+            showRpmWarning = false;
+            showRpmLimit = false;
+        }
+
+        datafields[DATAFLD_RPM].setValue((int)rpm);
+        datafields[DATAFLD_CLT].setValue(megaSquirt.getClt(tempScale));
+        datafields[DATAFLD_MAT].setValue(megaSquirt.getMat(tempScale));
+        datafields[DATAFLD_MAP].setValue(megaSquirt.getMap());
+        datafields[DATAFLD_TPS].setValue(megaSquirt.getTps());
+        datafields[DATAFLD_AFR].setValue(megaSquirt.getAfr());
+        datafields[DATAFLD_SPK].setValue(megaSquirt.getSpk());
+
+        if (megaSquirt.getEngine() & MS_ENGINE_READY)
+        {
+            if (megaSquirt.getEngine() & MS_ENGINE_CRANKING)
+                engIndicator.setState(2, BLACK, RED, F("Cranking"));
+            else
+                engIndicator.setState(3, BLACK, GREEN, F("Running"));
+        }
+        else
+            engIndicator.setState(1, DRKGRAY, LTGRAY, F("Not running"));
+    }
+    else
+    {
+        byte c;
+        for (c=1; c<MAX_DATAFLDS;c++)
+        {
+            datafields[c].setUnknown();
+        }
+        engIndicator.setState(0, DRKGRAY, LTGRAY, F("No ECU?"));
+        if (!showLogo)
+        {
+            drawLogo();
+            showLogo = true;
+            showRpmWarning = false;
+            showRpmLimit = false;
+        }
+    }*/
+}
 
 void drawMainScreen()
 {
@@ -155,195 +307,4 @@ void display_freeram()
 {
 //	MinimumSerial.print(F("-SRAM left="));
 //	MinimumSerial.println(freeRam());
-}
-
-void setup() {
-	Serial.begin(115200); //115200 pins 0, 1
-
-    D(debugSerial.begin(9600);)
-	D(debugSerial.println(F("mslogger-lcd-sd-blu-uno"));)
-
-	tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
-
-//    tft.reset();
-//
-//    uint16_t identifier = tft.readID();
-//
-//    if(identifier != 0x9328)
-//    {
-//    	D(debugSerial.print(F("Unknown LCD driver chip: "));)
-//		D(debugSerial.println(identifier,HEX);)
-//    }
-//
-//    tft.begin(identifier);
-//    tft_spi_save = SPCR;
-
-    tft.setRotation(3);
-
-    tft.fillScreen(BLACK);
-
-    drawLogo();
-
-
-    if (!SD.begin(SD_CS)) {
-    	drawError(F("SD CARD INIT FAILED!"));
-    }
-    sd_spi_save = SPCR;
-
-    SPCR   = tft_spi_save;
-
-/*
-	// open the file. note that only one file can be open at a time,
-	// so you have to close this one before opening another.
-	File configFile = SD.open("config.txt");
-	// if the file opened okay, write to it:
-	if (configFile) {
-	} else {
-	// no card just display stuff (no logging)
-	}
-/*
-	if (sdcard.begin(SS, SPI_HALF_SPEED)) {
-
-		SdFile configFile;
-		// re-open the file for reading:
-		if (!configFile.open("test.txt", O_READ)) {
-		}
-//		Serial.println("test.txt:");
-
-		// read from the file until there's nothing else in it:
-		int data;
-		while ((data = configFile.read()) > 0) {
-			//Serial.write(data);
-		}
-		// close the file:
-		configFile.close();
-	}
-	*/
-
-	gpsSerial.begin(9600);
-    // turn on RMC (recommended minimum) and GGA (fix data) including altitude
-    //gps.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-
-    // Set the update rate
-    //gps.sendCommand(PMTK_SET_NMEA_UPDATE_5HZ);   // 5 Hz update rate
-    //gps.sendCommand(PMTK_API_SET_FIX_CTL_5HZ);   // 5 Hz update rate
-
-    // enable interrupts to capture serial reads (for gps / megasquirt etc)
-	cli();//stop interrupts
-    OCR0A = 0xAF;
-    TIMSK0 |= _BV(OCIE0A);
-    sei();//allow interrupts
-
-    drawMainScreen();
-
-    flashtime = 0;
-}
-
-void dataCaptureLoop()
-{
-    flashtime++;
-    if (showRpmWarning)
-    {
-        if (flashtime % 2)
-        {
-            drawWarnRPM();
-        }
-        else
-        {
-            tft.fillRect(0, 0, 320, 25, BLACK);
-        }
-    }
-/*
-    if (megaSquirt.requestData() == 1)
-    {
-    	D(debugSerial->print(F("RPM: "));)
-    	D(debugSerial->println(megaSquirt.getRpm());)
-
-        unsigned int rpm = megaSquirt.getRpm();
-
-        if ((rpm/100) >= rpmWarn && (rpm/100) < rpmLimit)
-        {
-            showRpmWarning = true;
-            showRpmLimit = false;
-            showLogo = false;
-        }
-        else if ((rpm/100) >= rpmLimit)
-        {
-            if (!showRpmLimit)
-            {
-                showRpmLimit = true;
-                showRpmWarning = false;
-                showLogo = false;
-                drawLimitRPM();
-            }
-        }
-        else if (!showLogo)
-        {
-            drawLogo();
-            showLogo = true;
-            showRpmWarning = false;
-            showRpmLimit = false;
-        }
-
-        datafields[DATAFLD_RPM].setValue((int)rpm);
-        datafields[DATAFLD_CLT].setValue(megaSquirt.getClt(tempScale));
-        datafields[DATAFLD_MAT].setValue(megaSquirt.getMat(tempScale));
-        datafields[DATAFLD_MAP].setValue(megaSquirt.getMap());
-        datafields[DATAFLD_TPS].setValue(megaSquirt.getTps());
-        datafields[DATAFLD_AFR].setValue(megaSquirt.getAfr());
-        datafields[DATAFLD_SPK].setValue(megaSquirt.getSpk());
-
-        if (megaSquirt.getEngine() & MS_ENGINE_READY)
-        {
-            if (megaSquirt.getEngine() & MS_ENGINE_CRANKING)
-                engIndicator.setState(2, BLACK, RED, F("Cranking"));
-            else
-                engIndicator.setState(3, BLACK, GREEN, F("Running"));
-        }
-        else
-            engIndicator.setState(1, DRKGRAY, LTGRAY, F("Not running"));
-    }
-    else
-    {
-        byte c;
-        for (c=1; c<MAX_DATAFLDS;c++)
-        {
-            datafields[c].setUnknown();
-        }
-        engIndicator.setState(0, DRKGRAY, LTGRAY, F("No ECU?"));
-        if (!showLogo)
-        {
-            drawLogo();
-            showLogo = true;
-            showRpmWarning = false;
-            showRpmLimit = false;
-        }
-    }*/
-}
-
-void loop()
-{
-    if (millis() > time) {
-        time = millis()+100;
-    	dataCaptureLoop();
-    }
-
-//    if (gps.newNMEAreceived()) {
-//
-//       if (gps.parse(gps.lastNMEA())) {
-//    	   gps.latitude_fixed;
-//    	   gps.longitude_fixed;
-//    	   gps.speed;
-//    	   gps.angle;
-//    	   gps.altitude;
-//       }
-//    }
-}
-
-// Interrupt is called once a millisecond, looks for any new GPS data, and stores it
-// at 9600 this is roughly 1 byte or more per interrupt
-// at 115200 this is nearly 15 bytes or more per interrupt
-SIGNAL(TIMER0_COMPA_vect) {
-	 while (gpsSerial.available() > 0)
-	    gps.encode(gpsSerial.read());
 }
