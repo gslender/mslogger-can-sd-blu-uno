@@ -3,7 +3,6 @@
  *
 	#define DEBUG // comment out to en/disable
 	#include "debug.h"
-	D(Serial debugSerial;)
 
 	#define DEBUG // comment out to en/disable
 	#define DEBUG_USE_SOFTSERIAL
@@ -26,6 +25,8 @@
 	#endif
 	//// the following must be in an impl file  D(SoftwareSerial* debugSerial;)
 	#define D(x) x
+	#define UN_D(y)
 #else
 	#define D(x)
+	#define UN_D(y) y
 #endif

@@ -20,9 +20,9 @@ bool showRpmLimit = false;
 bool showLogo = true;
 
 void setup() {
-	Serial.begin(115200); //115200 pins 0, 1
+//	Serial.begin(115200); //115200 pins 0, 1
 
-    D(debugSerial.begin(9600);)
+    D(debugSerial.begin(115200);)
 	D(debugSerial.println(F("mslogger-lcd-sd-blu-uno"));)
 
 	tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab

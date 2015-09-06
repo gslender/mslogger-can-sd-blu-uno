@@ -1,10 +1,13 @@
 #ifndef _MAIN_H_
 #define _MAIN_H_
 
-#include "MegaSquirt.h"
-#include "GfxDataField.h"
-#include "GfxIndicator.h"
-#include "GfxTextButton.h"
+#define DEBUG // comment out to enable and disable the MegaSquirt code
+#include "debug.h"
+
+#include "megasquirt/MegaSquirt.h"
+#include "gfx/GfxDataField.h"
+#include "gfx/GfxIndicator.h"
+#include "gfx/GfxTextButton.h"
 
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_ST7735.h> // Hardware-specific library
@@ -13,10 +16,6 @@
 #include <Bluetooth_HC05.h>
 #include <SoftwareSerial.h>
 #include <SPI.h>
-//#define DEBUG // comment out to en/disable
-//#define DEBUG_USE_SOFTSERIAL
-#include "debug.h"
-D(SoftwareSerial debugSerial(2,3);)
 
 #define DATAFLD_RPM 0
 #define DATAFLD_CLT 1

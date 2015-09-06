@@ -1,6 +1,6 @@
-#include "debug.h"
-
 #include "MegaSquirt.h"
+#include "../debug.h"
+
 
 #define offset 3 // new serial protocol is offset by 3
 
@@ -53,7 +53,7 @@ float MegaSquirt::getSpk() {
 float MegaSquirt::getPwp() {
 	return ((data[offset + 2] << 8) | data[offset + 3]) * 0.000666f;
 }
-
+// { 'a', 0x0, 0x6 }  sends 112 bytes from the outpc
 int MegaSquirt::requestData() {
 	return runCommand((byte*) (const byte[] ) { 0x0, 0x1, 0x41, 0xD3, 0xD9,
 					0x9E, 0x8B }, 7, data, 170);
