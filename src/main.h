@@ -27,39 +27,33 @@
 #define MAX_DATAFLDS 7
 
 // Assign human-readable names to some common 16-bit color values:
-#define	BLACK   0x0000
+#define	BLACK   ST7735_BLACK
+#define	BLUE    ST7735_BLUE
+#define	RED     ST7735_RED
+#define	GREEN   ST7735_GREEN
+#define CYAN    ST7735_CYAN
+#define MAGENTA ST7735_MAGENTA
+#define YELLOW  ST7735_YELLOW
+#define WHITE   ST7735_WHITE
+
 #define	DRKGRAY 0x2124
 #define	LTGRAY  0xBDD7
-#define	BLUE    0x001F
 #define	LTBLUE  0x94DF
-#define	RED     0xF800
-#define	GREEN   0x07E0
-#define CYAN    0x07FF
-#define MAGENTA 0xF81F
-#define YELLOW  0xFFE0
-#define WHITE   0xFFFF
 
 #define TFT_CS     10
 #define TFT_RST    9
 #define TFT_DC     8
 #define SD_CS 	   4
 
+#define TFT_WIDTH 160
+#define TFT_HEIGHT 128
 
-void dataCaptureLoop();
-
-void drawMainScreen();
 
 void drawLogo();
 
 void drawError(const __FlashStringHelper *ifsh);
 
-void drawWarnRPM();
-
-void drawLimitRPM();
-
 int freeRam();
-
-void display_freeram();
 
 
 #endif /* _MAIN_H_ */

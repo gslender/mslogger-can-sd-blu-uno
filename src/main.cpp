@@ -23,7 +23,7 @@ void setup() {
 //	Serial.begin(115200); //115200 pins 0, 1
 
     D(debugSerial.begin(115200);)
-	D(debugSerial.println(F("mslogger-lcd-sd-blu-uno"));)
+	D(debugSerial.println(F("setup"));)
 
 	tft.initR(INITR_BLACKTAB);   // initialize a ST7735S chip, black tab
 
@@ -100,17 +100,17 @@ void setup() {
     TIMSK0 |= _BV(OCIE0A);
     sei();//allow interrupts
 
-    drawMainScreen();
+//    drawMainScreen();
 
     flashtime = 0;
 }
 
 void loop()
 {
-    if (millis() > time) {
-        time = millis()+100;
-    	dataCaptureLoop();
-    }
+//    if (millis() > time) {
+//        time = millis()+100;
+//    	dataCaptureLoop();
+//    }
 
 //    if (gps.newNMEAreceived()) {
 //
@@ -132,141 +132,17 @@ SIGNAL(TIMER0_COMPA_vect) {
 //	    gps.encode(gpsSerial.read());
 }
 
-void dataCaptureLoop()
-{
-    flashtime++;
-    if (showRpmWarning)
-    {
-        if (flashtime % 2)
-        {
-            drawWarnRPM();
-        }
-        else
-        {
-            tft.fillRect(0, 0, 320, 25, BLACK);
-        }
-    }
-/*
-    if (megaSquirt.requestData() == 1)
-    {
-    	D(debugSerial->print(F("RPM: "));)
-    	D(debugSerial->println(megaSquirt.getRpm());)
-
-        unsigned int rpm = megaSquirt.getRpm();
-
-        if ((rpm/100) >= rpmWarn && (rpm/100) < rpmLimit)
-        {
-            showRpmWarning = true;
-            showRpmLimit = false;
-            showLogo = false;
-        }
-        else if ((rpm/100) >= rpmLimit)
-        {
-            if (!showRpmLimit)
-            {
-                showRpmLimit = true;
-                showRpmWarning = false;
-                showLogo = false;
-                drawLimitRPM();
-            }
-        }
-        else if (!showLogo)
-        {
-            drawLogo();
-            showLogo = true;
-            showRpmWarning = false;
-            showRpmLimit = false;
-        }
-
-        datafields[DATAFLD_RPM].setValue((int)rpm);
-        datafields[DATAFLD_CLT].setValue(megaSquirt.getClt(tempScale));
-        datafields[DATAFLD_MAT].setValue(megaSquirt.getMat(tempScale));
-        datafields[DATAFLD_MAP].setValue(megaSquirt.getMap());
-        datafields[DATAFLD_TPS].setValue(megaSquirt.getTps());
-        datafields[DATAFLD_AFR].setValue(megaSquirt.getAfr());
-        datafields[DATAFLD_SPK].setValue(megaSquirt.getSpk());
-
-        if (megaSquirt.getEngine() & MS_ENGINE_READY)
-        {
-            if (megaSquirt.getEngine() & MS_ENGINE_CRANKING)
-                engIndicator.setState(2, BLACK, RED, F("Cranking"));
-            else
-                engIndicator.setState(3, BLACK, GREEN, F("Running"));
-        }
-        else
-            engIndicator.setState(1, DRKGRAY, LTGRAY, F("Not running"));
-    }
-    else
-    {
-        byte c;
-        for (c=1; c<MAX_DATAFLDS;c++)
-        {
-            datafields[c].setUnknown();
-        }
-        engIndicator.setState(0, DRKGRAY, LTGRAY, F("No ECU?"));
-        if (!showLogo)
-        {
-            drawLogo();
-            showLogo = true;
-            showRpmWarning = false;
-            showRpmLimit = false;
-        }
-    }*/
-}
-
-void drawMainScreen()
-{
-	D(debugSerial.println(F(">> Main"));)
-
-    //STRIPES
-    byte yrow = 30;
-    byte c;
-    for (c=0; c<5;c++)
-    {
-        tft.fillRect(0, (yrow+18)+2*c*18, 320, 16, DRKGRAY);
-    }
-
-    //DATAFIELDS
-    datafields[DATAFLD_RPM].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_RPM].drawLabel(10,yrow,2,F("RPM:"));
-
-    yrow +=18;
-    datafields[DATAFLD_CLT].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_CLT].drawLabel(10,yrow,2,F("CLT:"));
-
-    yrow +=18;
-    datafields[DATAFLD_MAT].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_MAT].drawLabel(10,yrow,2,F("MAT:"));
-
-    yrow +=18;
-    datafields[DATAFLD_MAP].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_MAP].drawLabel(10,yrow,2,F("MAP:"));
-
-    yrow +=18;
-    datafields[DATAFLD_TPS].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_TPS].drawLabel(10,yrow,2,F("TPS:"));
-
-    yrow +=18;
-    datafields[DATAFLD_AFR].create(&tft,230,yrow,2,1,BLACK,LTGRAY);
-    datafields[DATAFLD_AFR].drawLabel(10,yrow,2,F("AFR:"));
-
-    yrow +=18;
-    datafields[DATAFLD_SPK].create(&tft,230,yrow,2,1,DRKGRAY,WHITE);
-    datafields[DATAFLD_SPK].drawLabel(10,yrow,2,F("SPK:"));
-
-    //INDICATORS / BUTTONS
-    yrow +=20;
-    engIndicator.create(&tft, 0, yrow, 140, 24, 2);
-    engIndicator.setState(0, DRKGRAY, LTGRAY, F("ECU?"));
-}
-
 void drawLogo()
 {
-    tft.fillRect(0, 0, 320, 25, LTBLUE);
-    tft.setTextSize(2);
-    tft.setCursor(76,5);
+    tft.fillRect(0, 0, TFT_WIDTH, 12, LTBLUE);
+    tft.setTextSize(1);
+    tft.setCursor(2,2);
     tft.setTextColor(BLACK);
-    tft.print(F("RednelsRacing"));
+    tft.print(F("Starting..."));
+
+    tft.setCursor(TFT_WIDTH-60,2);
+    tft.printf(F("Free:%d"),freeRam());
+
 }
 
 void drawError(const __FlashStringHelper *ifsh)
@@ -277,34 +153,10 @@ void drawError(const __FlashStringHelper *ifsh)
     tft.print(ifsh);
 }
 
-void drawWarnRPM()
-{
-    tft.fillRect(0, 0, 320, 25, YELLOW);
-    tft.setCursor(85,4);
-    tft.setTextSize(2);
-    tft.setTextColor(BLACK);
-    tft.print(F("RPM WARNING"));
-}
-
-void drawLimitRPM()
-{
-    tft.fillRect(0, 0, 320, 25, RED);
-    tft.setCursor(105,4);
-    tft.setTextSize(2);
-    tft.setTextColor(WHITE);
-    tft.print(F("RPM LIMIT"));
-}
-
 int freeRam()
 {
   extern int __heap_start,*__brkval;
   int v;
   return (int)&v - (__brkval == 0
     ? (int)&__heap_start : (int) __brkval);
-}
-
-void display_freeram()
-{
-//	MinimumSerial.print(F("-SRAM left="));
-//	MinimumSerial.println(freeRam());
 }
