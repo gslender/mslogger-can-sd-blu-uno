@@ -19,14 +19,14 @@ The Arduino board actually used is the freetronics Eleven (100% Uno) - we've the
 *The project is not yet working or finished, but I will be updating as I progress...*
 
 **Pins used:**
-* D0 DB9 Hardware Serial RX - Megasquirt
-* D1 DB9 Hardware Serial TX - Megasquirt
-* D2 DB9 Software Serial RX - DEBUG 
-* D3 DB9 Software Serial TX - DEBUG
+* D0 DB9 Hardware Serial RX - DEBUG 
+* D1 DB9 Hardware Serial TX - DEBUG 
+* D2 Bluetooth - RX  
+* D3 Bluetooth - TX
 * D4 LCD TFT - SD Card
-* D5 Bluetooth - RX 
-* D6 Bluetooth - TX
-* D7 Bluetooth - PIO11 (*see below)
+* D5 
+* D6 Bluetooth - RESET (*see below) 
+* D7 Bluetooth - Command Mode / PIO11 (*see below)
 * D8 LCD TFT - Display
 * D9 -
 * D10 LCD TFT - Display
@@ -39,3 +39,5 @@ The Arduino board actually used is the freetronics Eleven (100% Uno) - we've the
 * A3 LCD TFT - NAV Switch
 * A4 -
 * A5 -
+
+*Note: The Linksprite Bluetooth Shield for Arduino did not come with support for pins for reset or AT command mode enabling, so I wired these to set pins on the shield. This enables going into and out of AT command mode so that you can control the bluetooth module via software.*

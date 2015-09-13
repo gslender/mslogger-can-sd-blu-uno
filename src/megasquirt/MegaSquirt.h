@@ -3,6 +3,7 @@
 
 #define MS_CELSIUS 1
 #define MS_FAHRENHEIT 0
+
 #define MS_ENGINE_READY 1
 #define MS_ENGINE_CRANKING 2
 #define MS_ENGINE_STARTW 4
@@ -13,19 +14,8 @@
 #define MS_ENGINE_MAPACCDEN 128
 
 #include "Arduino.h"
-#include "../debug.h"
+#include "../main.h"
 #include <limits.h>
-
-enum {
-	MS_DEFAULT_TIMEOUT = 200,
-	MS_SIGNATURE_DEFAULT_TIMEOUT = 1000,
-	MS_REALTIME_DATA_DEFAULT_TIMEOUT = 1000,
-	MS_REALTIME_DATA_LEN = 112,
-};
-
-enum MS_Result {
-	MS_OK = 0xFF, MS_FAIL = 0xFE, MS_ERR_TIMEOUT = 0xFD,
-};
 
 typedef struct {
 	uint16_t seconds;
@@ -56,7 +46,7 @@ class MegaSquirt {
 public:
 
 	MegaSquirt();
-	void process(int incomingByte);
+	void process(unsigned long id, unsigned char len, unsigned char buf[]);
 
 	byte getEngine();
 	unsigned int getRpm();
@@ -68,18 +58,9 @@ public:
 	float getTaf();
 	float getSpk();
 	float getPwp();
-	int requestData();
-	void requestSignature();
 
 private:
 	MSData data;
-
-	unsigned long m_timeout;
-	unsigned long m_ticksAtStart;
-	MS_Result m_errorCode;
-	void startOperation(unsigned long timeout);bool isOperationTimedOut() const;
-	unsigned long operationDuration() const;
-	int runCommand(byte cmd[], byte cmdLength, byte data[], byte dataLength);
 };
 
 #endif

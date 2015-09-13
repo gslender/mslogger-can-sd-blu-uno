@@ -67,7 +67,7 @@ unsigned long htoul(const char *str)
 
 #ifdef HC05_SOFTSERIAL
 Bluetooth_HC05::Bluetooth_HC05(SoftwareSerial &serial):
-  m_uart(&serial), m_timeout(HC05_DEFAULT_TIMEOUT), m_ticksAtStart(millis()),
+  m_uart(&serial), m_timeout(HC05_TIMEOUT_DEFAULT), m_ticksAtStart(millis()),
   m_modePin(0xFF), m_resetPin(0xFF), m_errorCode(HC05_OK)
 {
 }
@@ -90,36 +90,35 @@ HC05_Result Bluetooth_HC05::getLastError() const
   return m_errorCode;
 }
 
-void Bluetooth_HC05::begin(long baud_rate, uint8_t mode_pin, HC05_Mode mode)
-{
-	begin(baud_rate, 0xFF, mode_pin, mode);
-}
-
-
 void Bluetooth_HC05::begin(long baud_rate, uint8_t reset_pin,
-		uint8_t mode_pin, HC05_Mode mode)
+		HC05_Reset reset, uint8_t mode_pin, HC05_Mode mode)
 {
-  m_uart->begin(baud_rate);
 
   m_modePin = mode_pin;
+  m_reset = reset;
   pinMode(m_modePin, OUTPUT);
   digitalWrite(m_modePin, (mode == HC05_MODE_DATA ? LOW : HIGH));
+  m_uart->begin(baud_rate);
 
+  m_resetPin = reset_pin;
   if (reset_pin != 0xFF) {
-	  m_resetPin = reset_pin;
-	  pinMode(m_resetPin, OUTPUT);
-	  digitalWrite(m_resetPin, HIGH);
-	  hardReset();
-  } else
-	  softReset();
+	if (m_reset == HC05_RESET_GND) {
+      pinMode(m_resetPin, INPUT);
+    } else {
+      pinMode(m_resetPin, OUTPUT);
+      digitalWrite(m_resetPin, HIGH);
+    }
+    hardReset();
+  }
 }
 
 void Bluetooth_HC05::changeMode(HC05_Mode mode)
 {
   pinMode(m_modePin, OUTPUT);
   digitalWrite(m_modePin, (mode == HC05_MODE_DATA ? LOW : HIGH));
-
-  softReset();
+  if (m_resetPin != 0xFF) {
+      hardReset();
+    }
 }
 
 bool Bluetooth_HC05::probe(unsigned long timeout)
@@ -132,11 +131,17 @@ bool Bluetooth_HC05::probe(unsigned long timeout)
 
 void Bluetooth_HC05::hardReset()
 {
-  digitalWrite(m_resetPin, LOW);
-  delay(6);
-  digitalWrite(m_resetPin, HIGH);
-
-  m_errorCode = HC05_OK;
+	if (m_reset == HC05_RESET_GND) {
+		pinMode(m_resetPin, OUTPUT);
+		digitalWrite(m_resetPin, LOW);
+		delay(6);
+		pinMode(m_resetPin, INPUT);
+	} else {
+		digitalWrite(m_resetPin, LOW);
+		delay(6);
+		digitalWrite(m_resetPin, HIGH);
+	}
+	m_errorCode = HC05_OK;
 }
 
 bool Bluetooth_HC05::softReset(unsigned long timeout)
