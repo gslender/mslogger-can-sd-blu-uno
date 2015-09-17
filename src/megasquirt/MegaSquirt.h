@@ -18,49 +18,71 @@
 #include <limits.h>
 
 typedef struct {
-	uint16_t seconds;
-	uint16_t pw1;
-	uint16_t pw2;
-	uint16_t rpm;
-	int16_t advance;
-	uint8_t engine;
-	uint8_t afrtgt1;
-	uint8_t afrtgt2;
-	int16_t baro;
-	int16_t map;
-	int16_t mat;
-	int16_t clt;
-	int16_t tps;
-	int16_t batt;
-	int16_t afr1;
-	int16_t afr2;
-	int16_t ego1;
-	int16_t ego2;
-	int16_t accel;
-	int16_t ve1;
-	int16_t ve2;
-} MSData;
+	// 1512
+	union {
+		uint8_t bytes1512[8];
+		struct {
+			int16_t MAP; // * 0.1
+			uint16_t RPM;
+			int16_t CLT; // * 0.1
+			int16_t TPS; // * 0.1
+		};
+	};
+	// 1513
+	union {
+		uint8_t bytes1513[8];
+		struct {
+			uint16_t PW1; // * 0.001
+			uint16_t PW2; // * 0.001
+			int16_t MAT; // * 0.1
+			int16_t ADV_DEG; // * 0.1
+		};
+	};
+
+	// 1514
+	union {
+		uint8_t bytes1514[8];
+		struct {
+			uint8_t AFRTGT1; // * 0.1
+			uint8_t AFR1; // * 0.1
+			int16_t EGOCOR1; // * 0.1
+			int16_t EGT1; // * 0.1
+			int16_t PWSEQ1; // * 0.1
+		};
+	};
+
+	// 1515
+	union {
+		uint8_t bytes1515[8];
+		struct {
+			int16_t BATT; // * 0.1
+			int16_t SENSORS1; // * 0.1
+			int16_t SENSORS2; // * 0.1
+			int16_t KNK_RTD; // * 0.1
+		};
+	};
+
+	// 1516
+	union {
+		uint8_t bytes1516[8];
+		struct {
+			uint16_t VSS; // * 0.1
+			int16_t TC_RTD; // * 0.1
+			int16_t LAUNCH_TIMING; // * 0.1
+			uint16_t unused;
+		};
+	};
+} MSVars;
 
 class MegaSquirt {
 
 public:
-
 	MegaSquirt();
-	void process(unsigned long id, unsigned char len, unsigned char buf[]);
-
-	byte getEngine();
-	unsigned int getRpm();
-	float getMap();
-	float getMat(byte celsius);
-	float getClt(byte celsius);
-	float getTps();
-	float getAfr();
-	float getTaf();
-	float getSpk();
-	float getPwp();
+	void process(unsigned long id, unsigned char buf[]);
+	MSVars getData();
 
 private:
-	MSData data;
+	MSVars ms_variables;
 };
 
 #endif

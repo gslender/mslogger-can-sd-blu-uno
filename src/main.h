@@ -10,8 +10,6 @@
 
 #include <TinyGPS++.h> // GPS library
 #include <SdFat.h>
-//#include <SD.h>		// SD Card library
-//#include <Bluetooth_HC05.h>
 #include <SoftwareSerial.h>
 #include <mcp_can.h>
 

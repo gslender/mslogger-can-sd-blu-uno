@@ -4,55 +4,38 @@
 MegaSquirt::MegaSquirt() {
 }
 
-void MegaSquirt::process(unsigned long id, unsigned char len, unsigned char buf[]) {
+MSVars MegaSquirt::getData() {
+	return ms_variables;
+}
+
+void MegaSquirt::process(unsigned long id, unsigned char buf[]) {
 	if (id < 0)
 		return;
 
-}
+	switch (id) { // ID's 1520+ are Megasquirt CAN broadcast frames
 
-byte MegaSquirt::getEngine() {
-	return data.engine;
-}
+	// typical compiler optimizations will convert memcpy to multiple LDM/STM instructions
+	case 1512:
+		//ms_variables.RPM = (uint16_t) (word(buf[2], buf[3]));
+		memcpy(ms_variables.bytes1512, buf, 8);
+		break;
+	case 1513:
+		memcpy(ms_variables.bytes1513, buf, 8);
+		break;
+	case 1514:
+		memcpy(ms_variables.bytes1514, buf, 8);
+		break;
+	case 1515:
+		memcpy(ms_variables.bytes1515, buf, 8);
+		break;
+	case 1516:
+		memcpy(ms_variables.bytes1516, buf, 8);
+		break;
+	default: // not a broadcast packet
 
-unsigned int MegaSquirt::getRpm() {
-	return data.rpm;
-}
+		Serial.write("ID: ");
+		Serial.println(id);
 
-float MegaSquirt::getMap() {
-	return data.map * 0.1f;
-}
-
-float MegaSquirt::getMat(byte celsius) {
-	if (celsius) {
-		return (data.mat - 320)* 0.05555f;
 	}
-	return data.mat;
-}
-
-float MegaSquirt::getClt(byte celsius) {
-	if (celsius) {
-		return (data.clt - 320)* 0.05555f;
-	}
-	return data.clt;
-}
-
-float MegaSquirt::getTps() {
-	return data.tps * 0.1f;
-}
-
-float MegaSquirt::getAfr() {
-	return data.afr1 * 0.1f;
-}
-
-float MegaSquirt::getTaf() {
-	return data.afrtgt1 * 0.1f;
-}
-
-float MegaSquirt::getSpk() {
-	return data.advance * 0.1f;
-}
-
-float MegaSquirt::getPwp() {
-	return data.pw1 * 0.000666f;
 }
 

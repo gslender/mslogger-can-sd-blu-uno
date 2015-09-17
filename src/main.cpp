@@ -11,7 +11,6 @@ unsigned long time = millis();
 byte updatesCnt = 0;
 
 bool sdcard_active = false;
-bool bt_gps_active = false;
 bool can_active = false;
 
 int last_sentencesWithFix=0;
@@ -22,29 +21,24 @@ void setup() {
     D(debugSerial.begin(115200);)
 	D(debugSerial.println(F("setup"));)
 
-	if (!setupBt()) {
+	if (setupBt()) {
+		if (!setupGps()) {
+			D(debugSerial.println(F("GPS FAIL!"));)
+		}
+
+		if (!obtainDateTime()) {
+			D(debugSerial.println(F("TIME FAIL!"));)
+		}
+	} else {
 		D(debugSerial.println(F("BT FAIL!"));)
-    	return;
-	}
-
-	if (!setupGps()) {
-		D(debugSerial.println(F("GPS FAIL!"));)
-    	return;
-	}
-
-	if (!obtainDateTime()) {
-		D(debugSerial.println(F("TIME FAIL!"));)
-    	return;
 	}
 
     if (!setupSd()) {
     	D(debugSerial.println(F("SD CARD FAIL!"));)
-		return;
 	}
 
 	if (!setupCan()) {
 		D(debugSerial.println(F("CAN FAIL!"));)
-    	return;
 	}
 }
 
@@ -60,11 +54,11 @@ void loop()
 		if (CAN_MSGAVAIL == CAN.checkReceive())       // check if data coming
 		{
 			CAN.readMsgBufID(&id,&len, buf); // read data,  len: data length, buf: data buf
-			megaSquirt.process(id,len, buf);
+			megaSquirt.process(id, buf);
 		}
 	}
 
-	if (gps.location.isUpdated()) {
+	if (gps.location.isUpdated() && sdcard_active) {
 		updatesCnt++;
 
 		logfile.print(gps.location.lat());
@@ -88,7 +82,7 @@ void loop()
 		start_time = millis();
 		logfile.flush();
 
-		D(debugSerial.printf(F("%d/sec\r\n"),updatesCnt);)
+		D(debugSerial.printf(F("%d/sec - %d sram\r\n"),updatesCnt,freeRam());)
 		updatesCnt=0;
 	}
 }
@@ -106,24 +100,24 @@ void grabGPSData(unsigned long duration) {
 }
 
 bool setupSd() {
-	D(debugSerial.println(F("Sd"));)
+	D(debugSerial.println(F(">Sd"));)
 
 	if (SD.begin(SD_CS_PIN, SPI_FULL_SPEED)) {
 		logfile = SD.open("datalog.msl", FILE_WRITE);
-		if (logfile) return true;
+		if (logfile) sdcard_active = true;
 	}
-	D(debugSerial.println(F("SD CARD INIT FAILED!"));)
-	return false;
+	return sdcard_active;
 }
 
 bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
+	D(debugSerial.println(cmd);)
 	gps_serial.println(cmd);
-	unsigned long start_time = millis();
-	unsigned long time_lap = millis() - start_time;
+	unsigned long end_time = millis() + waitforMS;
 	byte state=0;
-	while (time_lap < waitforMS) {
+	while (end_time > millis()) {
 		if (gps_serial.available()) {
 			char c = gps_serial.read();
+			D(debugSerial.print(c);)
 			switch (state) {
 			case 0:
 				if (c == 'O' || c == 'o')
@@ -134,7 +128,7 @@ bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
 					state = 2;
 				break;
 			case 2:
-				if (c == '\r' || c == '\n')
+				if (c == '\n')
 					return true;
 				break;
 			}
@@ -146,9 +140,8 @@ bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
 }
 
 bool setupBt() {
-	D(debugSerial.println(F("Bt"));)
+	D(debugSerial.println(F(">Bt"));)
 
-//	blumod.begin(38400, BT_RESET_PIN, HC05_RESET_GND, BT_MODE_PIN, HC05_MODE_COMMAND);
 	gps_serial.begin(38400);
 	pinMode(BT_MODE_PIN, OUTPUT);
 	digitalWrite(BT_MODE_PIN, HIGH);
@@ -160,14 +153,10 @@ bool setupBt() {
 
 	delay(500);
 
-	//	while (!blumod.probe()) {
 	while (!doCmdWaitOkRespBt(F("AT"),250)) {
 		delay(250);
 	}
-
-//	blumod.restoreDefaults();
 	doCmdWaitOkRespBt(F("AT+ORGL"),250);
-//	blumod.hardReset();
 	pinMode(BT_RESET_PIN, OUTPUT);
 	digitalWrite(BT_RESET_PIN, LOW);
 	delay(6);
@@ -175,32 +164,25 @@ bool setupBt() {
 
 	delay(500);
 
-//	while (!blumod.probe()) {
 	while (!doCmdWaitOkRespBt(F("AT"),250)) {
 		delay(250);
 	}
 
-//	blumod.setRole(HC05_ROLE_MASTER);
 	doCmdWaitOkRespBt(F("AT+ROLE=1"),250);
-//	blumod.setPassword("0000");
 	doCmdWaitOkRespBt(F("AT+PSWD=0000"),250);
-//	blumod.initSerialPortProfile();
+	doCmdWaitOkRespBt(F("AT+INQM=1,3,20"),250);
 	doCmdWaitOkRespBt(F("AT+INIT"),250);
-//	blumod.inquire(NULL);
-	doCmdWaitOkRespBt(F("AT+INQ"),10000); // wait ten seconds
-//	blumod.setSerialMode(9600,1,HC05_NO_PARITY);
+	doCmdWaitOkRespBt(F("AT+INQ"),30000); // wait 30 seconds
 	doCmdWaitOkRespBt(F("AT+UART=9600,0,0"),250);
-//	BluetoothAddress qstarz818 = { 0x1c, 0x00, 0x88, 0x6e, 0x38, 0x14 };
-//	bt_gps_active = blumod.connect(qstarz818,10000);
-	doCmdWaitOkRespBt(F("AT+LINK=1c,88,14386e"),10000); // wait ten seconds
+	bool result = doCmdWaitOkRespBt(F("AT+LINK=1c,88,14386e"),10000); // wait ten seconds
 
 	delay(500);
 
-	return bt_gps_active;
+	return result;
 }
 
 bool setupGps() {
-	D(debugSerial.println(F("Gps"));)
+	D(debugSerial.println(F(">Gps"));)
 
 	gps_serial.begin(38400);
 
@@ -228,18 +210,24 @@ bool setupGps() {
 }
 
 bool obtainDateTime() {
+	D(debugSerial.println(F(">Time"));)
 	//try to gather time for 10 seconds
-	for (int i = 0; i < 5; i++) {
-		grabGPSData(2000);
+	for (int i = 0; i < 10; i++) {
+		grabGPSData(1000);
 
-		if (gps.time.isUpdated())
+		if (gps.time.isUpdated()) {
+
+			D(debugSerial.printf(F("%d %d:%d\r\n"),gps.date.year(),gps.time.hour(),gps.time.minute());)
 			return true;
+		}
 	}
 	return false;
 }
 
 bool setupCan() {
-	 return CAN_OK == CAN.begin(CAN_500KBPS);
+	D(debugSerial.println(F(">Can"));)
+	can_active = (CAN_OK == CAN.begin(CAN_500KBPS));
+	return can_active;
 }
 
 int freeRam() {
