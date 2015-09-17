@@ -7,6 +7,7 @@ File logfile;
 MegaSquirt megaSquirt;
 SdFat SD;
 
+char date_time_filename[30];
 unsigned long time = millis();
 byte updatesCnt = 0;
 
@@ -26,7 +27,7 @@ void setup() {
 			D(debugSerial.println(F("GPS FAIL!"));)
 		}
 
-		if (!obtainDateTime()) {
+		if (!buildDateTime()) {
 			D(debugSerial.println(F("TIME FAIL!"));)
 		}
 	} else {
@@ -103,17 +104,18 @@ bool setupSd() {
 	D(debugSerial.println(F(">Sd"));)
 
 	if (SD.begin(SD_CS_PIN, SPI_FULL_SPEED)) {
-		logfile = SD.open("datalog.msl", FILE_WRITE);
+		logfile = SD.open(date_time_filename, FILE_WRITE);
 		if (logfile) sdcard_active = true;
 	}
 	return sdcard_active;
 }
 
 bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
+	while (gps_serial.available()) gps_serial.read();
 	D(debugSerial.println(cmd);)
 	gps_serial.println(cmd);
-	unsigned long end_time = millis() + waitforMS;
 	byte state=0;
+	unsigned long end_time = millis() + waitforMS;
 	while (end_time > millis()) {
 		if (gps_serial.available()) {
 			char c = gps_serial.read();
@@ -135,6 +137,7 @@ bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
 		} else
 			delay(5);
 	}
+	D(debugSerial.println("**timeout");)
 
 	return false;
 }
@@ -151,7 +154,7 @@ bool setupBt() {
 	delay(6);
 	pinMode(BT_RESET_PIN, INPUT);
 
-	delay(500);
+	delay(700);
 
 	while (!doCmdWaitOkRespBt(F("AT"),250)) {
 		delay(250);
@@ -162,7 +165,7 @@ bool setupBt() {
 	delay(6);
 	pinMode(BT_RESET_PIN, INPUT);
 
-	delay(500);
+	delay(700);
 
 	while (!doCmdWaitOkRespBt(F("AT"),250)) {
 		delay(250);
@@ -170,7 +173,7 @@ bool setupBt() {
 
 	doCmdWaitOkRespBt(F("AT+ROLE=1"),250);
 	doCmdWaitOkRespBt(F("AT+PSWD=0000"),250);
-	doCmdWaitOkRespBt(F("AT+INQM=1,3,20"),250);
+	doCmdWaitOkRespBt(F("AT+INQM=1,1,20"),250);
 	doCmdWaitOkRespBt(F("AT+INIT"),250);
 	doCmdWaitOkRespBt(F("AT+INQ"),30000); // wait 30 seconds
 	doCmdWaitOkRespBt(F("AT+UART=9600,0,0"),250);
@@ -209,15 +212,18 @@ bool setupGps() {
 	return true;
 }
 
-bool obtainDateTime() {
-	D(debugSerial.println(F(">Time"));)
-	//try to gather time for 10 seconds
+bool buildDateTime() {
+	D(debugSerial.println(F(">DateTime"));)
+	//try to gather date&time for 10 seconds
 	for (int i = 0; i < 10; i++) {
 		grabGPSData(1000);
 
 		if (gps.time.isUpdated()) {
+			// 2015.09.17-20.41.11
+			snprintf(date_time_filename,30,"log-%d.%02d.%02d-%02d.%02d.%02d.msl",gps.date.year(),gps.date.month(),gps.date.day(),
+					gps.time.hour(),gps.time.minute(),gps.time.second());
 
-			D(debugSerial.printf(F("%d %d:%d\r\n"),gps.date.year(),gps.time.hour(),gps.time.minute());)
+			D(debugSerial.println(date_time_filename);)
 			return true;
 		}
 	}

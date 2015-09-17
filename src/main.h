@@ -24,7 +24,7 @@
 
 void grabGPSData(unsigned long duration);
 bool setupGps();
-bool obtainDateTime();
+bool buildDateTime();
 bool setupSd();
 bool setupBt();
 bool setupCan();
