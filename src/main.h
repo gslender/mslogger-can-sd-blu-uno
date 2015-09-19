@@ -7,7 +7,7 @@
 #include "megasquirt/MegaSquirt.h"
 
 #include <SPI.h>
-
+#include <MemoryFree.h>
 #include <TinyGPS++.h> // GPS library
 #include <SdFat.h>
 #include <SoftwareSerial.h>
@@ -28,7 +28,6 @@ bool buildDateTime();
 bool setupSd();
 bool setupBt();
 bool setupCan();
-int freeRam();
 
 
 #endif /* _MAIN_H_ */

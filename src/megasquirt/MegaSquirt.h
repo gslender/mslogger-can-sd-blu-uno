@@ -14,7 +14,6 @@
 #define MS_ENGINE_MAPACCDEN 128
 
 #include "Arduino.h"
-#include "../main.h"
 #include <limits.h>
 
 typedef struct {

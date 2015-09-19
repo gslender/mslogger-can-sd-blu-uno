@@ -4,13 +4,13 @@ MCP_CAN CAN(CAN_CS_PIN);
 SoftwareSerial gps_serial(BT_SER_RX,BT_SER_TX);
 TinyGPSPlus gps;
 File logfile;
-MegaSquirt megaSquirt;
+MegaSquirt ms;
 SdFat SD;
 
 char date_time_filename[30];
+char outstr[15];
 unsigned long time = millis();
-byte updatesCnt = 0;
-
+unsigned long lastFixCount = 0;
 bool sdcard_active = false;
 bool can_active = false;
 
@@ -21,6 +21,7 @@ void setup() {
 	//setup debug
     D(debugSerial.begin(115200);)
 	D(debugSerial.println(F("setup"));)
+	D(debugSerial.printf(F("%d sram\r\n"),freeMemory());)
 
 	if (setupBt()) {
 		if (!setupGps()) {
@@ -41,11 +42,58 @@ void setup() {
 	if (!setupCan()) {
 		D(debugSerial.println(F("CAN FAIL!"));)
 	}
+	D(debugSerial.printf(F("%d sram\r\n"),freeMemory());)
 }
 
 void loop()
 {
-	grabGPSData(5);
+	grabGPSData(10);
+
+	if (gps.location.isUpdated() && sdcard_active) {
+//		logfile.println(F("Time\tRPM\tMAP\tTPS\tAFR\tMAT\tCLT\tBatt V\tEGO cor1\tPW\tSpark Adv\tGPS Lat\tGPS Lon\tGPS Speed"));
+
+		logfile.print(millis());
+		logfile.print('\t');
+		logfile.print(ms.getData().RPM);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().MAP / 10.0f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().TPS / 10.0f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().AFR1 / 10.0f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) (ms.getData().MAT-320) * 0.05555f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) (ms.getData().CLT-320) * 0.05555f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().BATT / 10.0f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().EGOCOR1 / 10.0f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().PW1 / 1000.0f, 6, 3, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf((float) ms.getData().ADV_DEG / 10.0f, 6, 2, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf(gps.location.lat(), 12, 6, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf(gps.location.lng(), 12, 6, outstr);
+		logfile.print(outstr);
+		logfile.print('\t');
+		dtostrf(gps.speed.kmph(), 6, 1, outstr);
+		logfile.println(outstr);
+
+		logfile.flush();
+	}
 
 	if (can_active) {
 		unsigned char len = 0;
@@ -55,36 +103,16 @@ void loop()
 		if (CAN_MSGAVAIL == CAN.checkReceive())       // check if data coming
 		{
 			CAN.readMsgBufID(&id,&len, buf); // read data,  len: data length, buf: data buf
-			megaSquirt.process(id, buf);
+			ms.process(id, buf);
 		}
-	}
-
-	if (gps.location.isUpdated() && sdcard_active) {
-		updatesCnt++;
-
-		logfile.print(gps.location.lat());
-		logfile.print(',');
-		logfile.print(gps.location.lng());
-		logfile.print(',');
-		logfile.print(gps.speed.kmph());
-		logfile.print(',');
-		logfile.print(gps.time.hour());
-		logfile.print(',');
-		logfile.print(gps.time.minute());
-		logfile.print(',');
-		logfile.print(gps.time.second());
-		logfile.print(',');
-		logfile.print(gps.time.centisecond());
-		logfile.println();
 	}
 
 	time_lap = millis() - start_time;
 	if (time_lap > 1000) {
 		start_time = millis();
-		logfile.flush();
-
-		D(debugSerial.printf(F("%d/sec - %d sram\r\n"),updatesCnt,freeRam());)
-		updatesCnt=0;
+		D(debugSerial.printf(F("%d sram\r\n"),freeMemory());)
+		D(debugSerial.printf(F("%d / sec\r\n"),gps.sentencesWithFix()-lastFixCount);)
+		lastFixCount = gps.sentencesWithFix();
 	}
 }
 
@@ -105,7 +133,12 @@ bool setupSd() {
 
 	if (SD.begin(SD_CS_PIN, SPI_FULL_SPEED)) {
 		logfile = SD.open(date_time_filename, FILE_WRITE);
-		if (logfile) sdcard_active = true;
+		if (logfile) {
+			sdcard_active = true;
+
+			logfile.println(F("Time\tRPM\tMAP\tTPS\tAFR\tMAT\tCLT\tBatt V\tEGO cor1\tPW\tSpark Adv\tGPS Lat\tGPS Lon\tGPS Speed"));
+
+		}
 	}
 	return sdcard_active;
 }
@@ -234,11 +267,4 @@ bool setupCan() {
 	D(debugSerial.println(F(">Can"));)
 	can_active = (CAN_OK == CAN.begin(CAN_500KBPS));
 	return can_active;
-}
-
-int freeRam() {
-  extern int __heap_start,*__brkval;
-  int v;
-  return (int)&v - (__brkval == 0
-    ? (int)&__heap_start : (int) __brkval);
 }
