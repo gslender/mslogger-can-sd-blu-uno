@@ -14,15 +14,15 @@
     D(debugSerial.begin(9600);)
  */
 
+#ifdef DEBUG_USE_SOFTSERIAL
+	#include <SoftwareSerial.h>
+	extern SoftwareSerial debugSerial;
+#else
+	#define debugSerial Serial
+#endif
+//#define ENABLE_DEBUG // comment out this line to disable
+#ifdef ENABLE_DEBUG
 
-//#define DEBUG // comment out this line to disable
-#ifdef DEBUG
-	#ifdef DEBUG_USE_SOFTSERIAL
-		#include <SoftwareSerial.h>
-		extern SoftwareSerial debugSerial;
-	#else
-		#define debugSerial Serial
-	#endif
 	//// the following must be in an impl file  D(SoftwareSerial* debugSerial;)
 	#define D(x) x
 	#define UN_D(y)

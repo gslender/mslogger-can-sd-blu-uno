@@ -9,19 +9,25 @@ SdFat SD;
 
 char date_time_filename[30];
 char outstr[15];
-unsigned long time = millis();
+Metro redLedMetro = Metro(50);
 unsigned long lastFixCount = 0;
 bool sdcard_active = false;
 bool can_active = false;
-
-int last_sentencesWithFix=0;
-long time_lap, start_time = millis();
+bool major_fail = true;
+unsigned long time_lap, start_time = millis();
 
 void setup() {
-	//setup debug
+	pinMode(RED_LED, OUTPUT);
+	pinMode(GREEN_LED, OUTPUT);
+	pinMode(LOG_SW_PIN, INPUT);
+	digitalWrite(RED_LED, HIGH);
+	digitalWrite(GREEN_LED, LOW);
+	// setup Timer0 for LED status
+	OCR0A = 0xAF;
+	TIMSK0 |= _BV(OCIE0A);
+
     D(debugSerial.begin(115200);)
 	D(debugSerial.println(F("setup"));)
-	D(debugSerial.printf(F("%d sram\r\n"),freeMemory());)
 
 	if (setupBt()) {
 		if (!setupGps()) {
@@ -33,25 +39,69 @@ void setup() {
 		}
 	} else {
 		D(debugSerial.println(F("BT FAIL!"));)
+		redLedMetro.interval(1000);
+		return;
 	}
 
     if (!setupSd()) {
     	D(debugSerial.println(F("SD CARD FAIL!"));)
+		redLedMetro.interval(2000);
+		return;
+	}
+
+
+	if (digitalRead(LOG_SW_PIN) == HIGH) {
+		startLogFile();
 	}
 
 	if (!setupCan()) {
 		D(debugSerial.println(F("CAN FAIL!"));)
 	}
-	D(debugSerial.printf(F("%d sram\r\n"),freeMemory());)
+    major_fail = false;
+}
+
+// Interrupt is called once a millisecond,
+SIGNAL(TIMER0_COMPA_vect)
+{
+	if (!major_fail) return;
+
+	if (redLedMetro.check() == 1) {
+		redLedMetro.reset();
+		int state = digitalRead(RED_LED);
+		if (state)
+			state = LOW;
+		else
+			state = HIGH;
+		digitalWrite(RED_LED, state);
+	}
 }
 
 void loop()
 {
+	if (major_fail) return;
+
+	if (sdcard_active && digitalRead(LOG_SW_PIN) == LOW) {
+		if (logfile && logfile.isOpen()) {
+			logfile.close();
+		}
+		sdcard_active = false;
+		D(debugSerial.println(F("LOG OFF!!"));)
+		delay(1000);
+		return;
+	}
+
+	if (!sdcard_active && digitalRead(LOG_SW_PIN) == HIGH) {
+		startLogFile();
+		delay(1000);
+		return;
+	}
+
 	grabGPSData(10);
 
-	if (gps.location.isUpdated() && sdcard_active) {
-//		logfile.println(F("Time\tRPM\tMAP\tTPS\tAFR\tMAT\tCLT\tBatt V\tEGO cor1\tPW\tSpark Adv\tGPS Lat\tGPS Lon\tGPS Speed"));
+	digitalWrite(GREEN_LED, LOW);
 
+	if (gps.location.isUpdated() && sdcard_active) {
+		digitalWrite(GREEN_LED, HIGH);
 		logfile.print(millis());
 		logfile.print('\t');
 		logfile.print(ms.getData().RPM);
@@ -95,6 +145,7 @@ void loop()
 		logfile.flush();
 	}
 
+	digitalWrite(RED_LED, LOW);
 	if (can_active) {
 		unsigned char len = 0;
 		unsigned char buf[8];
@@ -102,17 +153,23 @@ void loop()
 
 		if (CAN_MSGAVAIL == CAN.checkReceive())       // check if data coming
 		{
+			digitalWrite(RED_LED, HIGH);
 			CAN.readMsgBufID(&id,&len, buf); // read data,  len: data length, buf: data buf
 			ms.process(id, buf);
 		}
 	}
+	D(debugLoop());
+}
+
+void debugLoop() {
 
 	time_lap = millis() - start_time;
 	if (time_lap > 1000) {
 		start_time = millis();
-		D(debugSerial.printf(F("%d sram\r\n"),freeMemory());)
-		D(debugSerial.printf(F("%d / sec\r\n"),gps.sentencesWithFix()-lastFixCount);)
+		int mem = freeMemory();
+		int fix = gps.sentencesWithFix()-lastFixCount;
 		lastFixCount = gps.sentencesWithFix();
+		debugSerial.printf(F("%dB free | %d/s gps fix\r\n"),mem,fix);
 	}
 }
 
@@ -128,19 +185,30 @@ void grabGPSData(unsigned long duration) {
 	}
 }
 
+bool startLogFile() {
+
+	if (logfile && logfile.isOpen()) {
+		logfile.close();
+	}
+	sdcard_active = false;
+	if (!buildDateTime()) return false;
+
+	if (SD.exists(date_time_filename)) SD.remove(date_time_filename);
+
+	logfile = SD.open(date_time_filename, FILE_WRITE);
+	if (logfile) {
+		sdcard_active = true;
+		logfile.println(F("Time\tRPM\tMAP\tTPS\tAFR\tMAT\tCLT\tBatt V\tEGO cor1\tPW\tSpark Adv\tGPS Lat\tGPS Lon\tGPS Speed"));
+	}
+	D(debugSerial.printf(F(">Log:%s"),date_time_filename);)
+
+	return sdcard_active;
+}
+
 bool setupSd() {
 	D(debugSerial.println(F(">Sd"));)
 
-	if (SD.begin(SD_CS_PIN, SPI_FULL_SPEED)) {
-		logfile = SD.open(date_time_filename, FILE_WRITE);
-		if (logfile) {
-			sdcard_active = true;
-
-			logfile.println(F("Time\tRPM\tMAP\tTPS\tAFR\tMAT\tCLT\tBatt V\tEGO cor1\tPW\tSpark Adv\tGPS Lat\tGPS Lon\tGPS Speed"));
-
-		}
-	}
-	return sdcard_active;
+	return SD.begin(SD_CS_PIN, SPI_FULL_SPEED);
 }
 
 bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
@@ -187,7 +255,7 @@ bool setupBt() {
 	delay(6);
 	pinMode(BT_RESET_PIN, INPUT);
 
-	delay(700);
+	delay(1500);
 
 	while (!doCmdWaitOkRespBt(F("AT"),250)) {
 		delay(250);
@@ -198,7 +266,7 @@ bool setupBt() {
 	delay(6);
 	pinMode(BT_RESET_PIN, INPUT);
 
-	delay(700);
+	delay(1500);
 
 	while (!doCmdWaitOkRespBt(F("AT"),250)) {
 		delay(250);
