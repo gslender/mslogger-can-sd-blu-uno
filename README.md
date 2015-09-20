@@ -22,7 +22,7 @@ The Arduino board actually used is the freetronics Eleven (100% Uno) - we've the
 * D2 Bluetooth - RX  
 * D3 Bluetooth - TX
 * D4 SPI SS - SD Card
-* D5 -
+* D5 LOG on/off switch
 * D6 Bluetooth - RESET (*see below) 
 * D7 Bluetooth - Command Mode / PIO11 (*see below)
 * D8 -
@@ -31,8 +31,8 @@ The Arduino board actually used is the freetronics Eleven (100% Uno) - we've the
 * D11 - SPI MOSI
 * D12 - SPI MISO
 * D13 - SPI SCK
-* A0 -
-* A1 -
+* A0 RED Status LED
+* A1 GREEN Status LED
 * A2 -
 * A3 -
 * A4 -
