@@ -19,10 +19,11 @@ inline void cpyFast(uint8_t *from,uint8_t *to) {
 	to[7] = from[6];
 }
 
-void MegaSquirt::process(unsigned long id, unsigned char buf[]) {
+bool MegaSquirt::process(unsigned long id, unsigned char buf[]) {
 	switch (id) {
 	case 1512:
 		cpyFast(buf,ms_variables.bytes1512);
+		return true;
 		break;
 	case 1513:
 		cpyFast(buf,ms_variables.bytes1513);
@@ -37,5 +38,6 @@ void MegaSquirt::process(unsigned long id, unsigned char buf[]) {
 		cpyFast(buf,ms_variables.bytes1516);
 		break;
 	}
+	return false;
 }
 

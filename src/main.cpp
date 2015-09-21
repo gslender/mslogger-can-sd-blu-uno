@@ -9,7 +9,7 @@ SdFat SD;
 
 char date_time_filename[30];
 char outstr[15];
-Metro redLedMetro = Metro(50);
+Metro redLedMetro = Metro(500);
 unsigned long lastFixCount = 0;
 bool sdcard_active = false;
 bool can_active = false;
@@ -146,18 +146,15 @@ void loop()
 	}
 
 	digitalWrite(RED_LED, LOW);
-	if (can_active) {
-		unsigned char len = 0;
-		unsigned char buf[8];
-		unsigned long id;
-
-		if (CAN_MSGAVAIL == CAN.checkReceive())       // check if data coming
-		{
+	if (can_active && CAN_MSGAVAIL == CAN.checkReceive()) {
+		unsigned char can_len = 0;
+		unsigned char can_buf[8];
+		unsigned long can_id;
+		CAN.readMsgBufID(&can_id,&can_len, can_buf);
+		if (ms.process(can_id, can_buf))
 			digitalWrite(RED_LED, HIGH);
-			CAN.readMsgBufID(&id,&len, buf); // read data,  len: data length, buf: data buf
-			ms.process(id, buf);
-		}
 	}
+
 	D(debugLoop());
 }
 
