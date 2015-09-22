@@ -115,10 +115,18 @@ void loop()
 		dtostrf((float) ms.getData().AFR1 / 10.0f, 6, 2, outstr);
 		logfile.print(outstr);
 		logfile.print('\t');
+#if USE_CELSIUS == 1
 		dtostrf((float) (ms.getData().MAT-320) * 0.05555f, 6, 2, outstr);
+#else
+		dtostrf((float) ms.getData().MAT / 10.0f, 6, 2, outstr);
+#endif
 		logfile.print(outstr);
 		logfile.print('\t');
+#if USE_CELSIUS == 1
 		dtostrf((float) (ms.getData().CLT-320) * 0.05555f, 6, 2, outstr);
+#else
+		dtostrf((float) ms.getData().CLT / 10.0f, 6, 2, outstr);
+#endif
 		logfile.print(outstr);
 		logfile.print('\t');
 		dtostrf((float) ms.getData().BATT / 10.0f, 6, 2, outstr);
@@ -275,7 +283,7 @@ bool setupBt() {
 	doCmdWaitOkRespBt(F("AT+INIT"),250);
 	doCmdWaitOkRespBt(F("AT+INQ"),30000); // wait 30 seconds
 	doCmdWaitOkRespBt(F("AT+UART=9600,0,0"),250);
-	bool result = doCmdWaitOkRespBt(F("AT+LINK=1c,88,14386e"),10000); // wait ten seconds
+	bool result = doCmdWaitOkRespBt(F(BT_GPS_DEVICE_ADDR),10000); // wait ten seconds
 
 	delay(500);
 
