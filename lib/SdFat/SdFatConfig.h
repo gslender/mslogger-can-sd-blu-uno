@@ -78,7 +78,7 @@
  * template parameters define the software SPI pins.  See the ThreeCard
  * example for simultaneous use of all three classes.
  */
-#define SD_SPI_CONFIGURATION 0
+#define SD_SPI_CONFIGURATION 1
 //------------------------------------------------------------------------------
 /**
  * If SD_SPI_CONFIGURATION is defined to be two, these definitions
@@ -107,7 +107,7 @@ uint8_t const SOFT_SPI_SCK_PIN = 13;
  * of the standard Arduino SPI library.  You must include SPI.h in your
  * programs when ENABLE_SPI_TRANSACTION is nonzero.
  */
-#define ENABLE_SPI_TRANSACTION 0
+#define ENABLE_SPI_TRANSACTION 1
 //------------------------------------------------------------------------------
 /**
  * Set ENABLE_SPI_YIELD nonzero to enable release of the SPI bus during

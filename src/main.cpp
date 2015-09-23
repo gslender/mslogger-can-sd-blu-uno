@@ -254,8 +254,10 @@ bool setupBt() {
 
 	delay(1500);
 
-	while (!doCmdWaitOkRespBt(F("AT"),250)) {
+	char n = 0;
+	while (!doCmdWaitOkRespBt(F("AT"),250) && n < 3) {
 		delay(250);
+		n++;
 	}
 	doCmdWaitOkRespBt(F("AT+ORGL"),250);
 	pinMode(BT_RESET_PIN, OUTPUT);
@@ -265,10 +267,11 @@ bool setupBt() {
 
 	delay(1500);
 
-	while (!doCmdWaitOkRespBt(F("AT"),250)) {
+	n = 0;
+	while (!doCmdWaitOkRespBt(F("AT"),250) && n < 3) {
 		delay(250);
+		n++;
 	}
-
 	doCmdWaitOkRespBt(F("AT+ROLE=1"),250);
 	doCmdWaitOkRespBt(F("AT+PSWD=0000"),250);
 	doCmdWaitOkRespBt(F("AT+INQM=1,1,20"),250);
