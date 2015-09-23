@@ -1,6 +1,7 @@
 #ifndef _MAIN_H_
 #define _MAIN_H_
 
+#include "config.h"
 //#define ENABLE_DEBUG // comment out this line to disable
 #include "debug.h"
 #include "Arduino.h"
