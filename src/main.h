@@ -2,7 +2,6 @@
 #define _MAIN_H_
 
 #include "config.h"
-//#define ENABLE_DEBUG // comment out this line to disable
 #include "debug.h"
 #include "Arduino.h"
 
@@ -16,26 +15,21 @@
 #include <SoftwareSerial.h>
 #include <mcp_can.h>
 
-#define BT_SER_TX 		2
-#define BT_SER_RX 		3
-#define SD_CS_PIN    	4
-#define LOG_SW_PIN    	5
-#define BT_RESET_PIN 	6
-#define BT_MODE_PIN 	7
-#define CAN_CS_PIN  	9
-
-#define RED_LED 		A0
-#define GREEN_LED 		A1
-
+#define RPM_ACTIVE_VALUE RPM_MAX_LIMIT-(RPM_LIMIT_STEPS*8)
+#define RPM_FLASH_VALUE RPM_MAX_LIMIT-(RPM_LIMIT_STEPS*2)
 
 void grabGPSData(unsigned long duration);
 bool setupGps();
 bool buildDateTime();
 bool startLogFile();
 bool setupSd();
+#ifdef USE_BT_GPS_DEVICE
 bool setupBt();
+#endif
 bool setupCan();
 void debugLoop();
-
+void checkRPMLimits();
+void writeRPMLedShiftBits();
+void enableRPMLed(int led, bool enable);
 
 #endif /* _MAIN_H_ */

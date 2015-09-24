@@ -1,7 +1,11 @@
 #include "main.h"
 
 MCP_CAN CAN(CAN_CS_PIN);
+#ifdef USE_BT_GPS_DEVICE
 SoftwareSerial gps_serial(BT_SER_RX,BT_SER_TX);
+#else
+SoftwareSerial gps_serial(GPS_SER_RX,GPS_SER_TX);
+#endif
 TinyGPSPlus gps;
 File logfile;
 MegaSquirt ms;
@@ -10,6 +14,7 @@ SdFat SD;
 char date_time_filename[30];
 char outstr[15];
 Metro redLedMetro = Metro(500);
+int RPMLedShiftBits = 0;
 unsigned long lastFixCount = 0;
 bool sdcard_active = false;
 bool can_active = false;
@@ -22,6 +27,10 @@ void setup() {
 	pinMode(LOG_SW_PIN, INPUT);
 	digitalWrite(RED_LED, HIGH);
 	digitalWrite(GREEN_LED, LOW);
+	pinMode(RPM_LATCH_PIN, OUTPUT);
+	pinMode(RPM_CLOCK_PIN, OUTPUT);
+	pinMode(RPM_DATA_PIN, OUTPUT);
+	writeRPMLedShiftBits();
 	// setup Timer0 for LED status
 	OCR0A = 0xAF;
 	TIMSK0 |= _BV(OCIE0A);
@@ -29,19 +38,25 @@ void setup() {
     D(debugSerial.begin(115200);)
 	D(debugSerial.println(F("setup"));)
 
+#ifdef USE_BT_GPS_DEVICE
 	if (setupBt()) {
+#endif
 		if (!setupGps()) {
 			D(debugSerial.println(F("GPS FAIL!"));)
 		}
 
 		if (!buildDateTime()) {
 			D(debugSerial.println(F("TIME FAIL!"));)
+			redLedMetro.interval(1000);
+			return;
 		}
+#ifdef USE_BT_GPS_DEVICE
 	} else {
 		D(debugSerial.println(F("BT FAIL!"));)
 		redLedMetro.interval(1000);
 		return;
 	}
+#endif
 
     if (!setupSd()) {
     	D(debugSerial.println(F("SD CARD FAIL!"));)
@@ -163,19 +178,54 @@ void loop()
 			digitalWrite(RED_LED, HIGH);
 	}
 
-	D(debugLoop());
+	time_lap = millis() - start_time;
+	if (time_lap > 30) {
+		start_time = millis();
+		checkRPMLimits();
+		D(debugLoop());
+	}
 }
 
 void debugLoop() {
 
-	time_lap = millis() - start_time;
-	if (time_lap > 1000) {
-		start_time = millis();
 		int mem = freeMemory();
 		int fix = gps.sentencesWithFix()-lastFixCount;
 		lastFixCount = gps.sentencesWithFix();
 		debugSerial.printf(F("%dB free | %d/s gps fix\r\n"),mem,fix);
+}
+void checkRPMLimits() {
+	if (ms.getData().RPM < RPM_ACTIVE_VALUE) {
+		if (RPMLedShiftBits == 0) {
+			return;
+		} else {
+			RPMLedShiftBits = 0;
+			writeRPMLedShiftBits();
+			return;
+		}
 	}
+	uint16_t rpm = ms.getData().RPM;
+	byte ledNum = 0;
+	for (int limit = RPM_ACTIVE_VALUE; limit < RPM_MAX_LIMIT; limit+=RPM_LIMIT_STEPS) {
+		enableRPMLed(ledNum, rpm > limit);
+		ledNum++;
+	}
+	if (rpm > RPM_FLASH_VALUE) {
+		RPMLedShiftBits ^= 0xffF;
+	}
+	writeRPMLedShiftBits();
+}
+
+void writeRPMLedShiftBits() {
+	digitalWrite(RPM_LATCH_PIN, LOW);
+	shiftOut(RPM_DATA_PIN, RPM_CLOCK_PIN, LSBFIRST, RPMLedShiftBits);
+	digitalWrite(RPM_LATCH_PIN, HIGH);
+}
+
+void enableRPMLed(int led, bool enable) {
+	if (enable)
+		RPMLedShiftBits |= (1UL << (led));
+	else
+		RPMLedShiftBits &= ~(1UL << (led));
 }
 
 void grabGPSData(unsigned long duration) {
@@ -216,6 +266,7 @@ bool setupSd() {
 	return SD.begin(SD_CS_PIN, SPI_FULL_SPEED);
 }
 
+#ifdef USE_BT_GPS_DEVICE
 bool doCmdWaitOkRespBt(const __FlashStringHelper *cmd, unsigned int waitforMS) {
 	while (gps_serial.available()) gps_serial.read();
 	D(debugSerial.println(cmd);)
@@ -292,12 +343,14 @@ bool setupBt() {
 
 	return result;
 }
+#endif
 
 bool setupGps() {
 	D(debugSerial.println(F(">Gps"));)
 
 	gps_serial.begin(38400);
 
+	while (gps_serial.available()) gps_serial.read();
 	/***use to calc checksum >> http://www.hhhh.org/wiml/proj/nmeaxor.html    **/
 
 	// switch to 9600 baud
