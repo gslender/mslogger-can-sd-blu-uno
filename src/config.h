@@ -41,6 +41,13 @@
 #define ENABLE_DEBUG
 
 
+/* Timezone offset from UTC.
+ * In Australia that is 10
+ * In Venezuela that is -4.3
+ * */
+#define TZ_OFFSET 10
+
+
 /* The following parameter, if set to 1 will enable conversion to
  * Celsius for all temperature logged values.
  * Any other value will use Fahrenheit

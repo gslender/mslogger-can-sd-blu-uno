@@ -2,7 +2,7 @@
 
 MCP_CAN CAN(CAN_CS_PIN);
 #ifdef USE_BT_GPS_DEVICE
-SoftwareSerial gps_serial(BT_SER_RX,BT_SER_TX);
+BigbufSoftwareSerial gps_serial(BT_SER_RX,BT_SER_TX);
 #else
 BigbufSoftwareSerial gps_serial(GPS_SER_RX,GPS_SER_TX);
 #endif
@@ -21,8 +21,6 @@ unsigned long lastFixCount = 0;
 bool sdcard_active = false;
 bool can_active = false;
 bool major_fail = true;
-//unsigned long time_lap, start_time = millis();
-byte rpmCnt;
 byte canQuiet;
 #define pause_ms 30
 
@@ -41,7 +39,7 @@ void setup() {
 		writeRPMLedShiftBits();
 		delay(pause_ms);
 	}
-	delay(pause_ms*3);
+	delay(pause_ms*10);
 
 	for (int j = 8; j > 0; j--) {
 		enableRPMLed(j-1, false);
@@ -86,6 +84,7 @@ void setup() {
 	if (!setupCan()) {
 		D(debugSerial.println(F("CAN FAIL!"));)
 	}
+
     major_fail = false;
 }
 
@@ -269,6 +268,7 @@ bool startLogFile() {
 	if (logfile) {
 		sdcard_active = true;
 		logfile.println(F("Time\tRPM\tMAP\tTPS\tAFR\tMAT\tCLT\tBatt V\tEGO cor1\tPW\tSpark Adv\tGPS Lat\tGPS Lon\tGPS Speed"));
+		logfile.timestamp(T_WRITE,year(),month(),day(),hour(),minute(),second());
 	}
 	D(debugSerial.printf(F(">Log:%s"),date_time_filename);)
 
@@ -388,7 +388,7 @@ bool setupGps() {
 	// set update rate at 100ms = 10Hz
 	gps_serial.println(F("$PMTK220,100*2F"));
 	// set pos fix rate at 100ms = 10Hz
-//	gps_serial.println(F("$PMTK300,100*2C"));
+	//gps_serial.println(F("$PMTK300,100*2C"));
 	// set pos fix rate at 200ms = 5Hz
 	gps_serial.println(F("$PMTK300,200*2F"));
 
@@ -402,9 +402,9 @@ bool buildDateTime() {
 		grabGPSData(1000);
 
 		if (gps.time.isUpdated()) {
-			// 2015.09.17-20.41.11
-			snprintf(date_time_filename,30,"log-%d.%02d.%02d-%02d.%02d.%02d.msl",gps.date.year(),gps.date.month(),gps.date.day(),
-					gps.time.hour(),gps.time.minute(),gps.time.second());
+	        setTime(gps.time.hour(), gps.time.minute(), gps.time.second(), gps.date.day(), gps.date.month(), gps.date.year());
+	        adjustTime(TZ_OFFSET * SECS_PER_HOUR);
+			snprintf(date_time_filename,30,"log-%d.%02d.%02d-%02d.%02d.%02d.msl",year(),month(),day(),hour(),minute(),second());
 
 			D(debugSerial.println(date_time_filename);)
 			return true;

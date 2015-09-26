@@ -8,6 +8,7 @@
 #include "megasquirt/MegaSquirt.h"
 
 #include <SPI.h>
+#include <Time.h>
 #include <Metro.h>
 #include <MemoryFree.h>
 #include <TinyGPS++.h>
