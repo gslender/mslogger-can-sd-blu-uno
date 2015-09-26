@@ -4,7 +4,7 @@ MCP_CAN CAN(CAN_CS_PIN);
 #ifdef USE_BT_GPS_DEVICE
 SoftwareSerial gps_serial(BT_SER_RX,BT_SER_TX);
 #else
-SoftwareSerial gps_serial(GPS_SER_RX,GPS_SER_TX);
+BigbufSoftwareSerial gps_serial(GPS_SER_RX,GPS_SER_TX);
 #endif
 TinyGPSPlus gps;
 File logfile;
@@ -14,12 +14,17 @@ SdFat SD;
 char date_time_filename[30];
 char outstr[15];
 Metro redLedMetro = Metro(500);
-int RPMLedShiftBits = 0;
+Metro rpmMetro = Metro(50);
+D(Metro debugMetro = Metro(1000));
+int rpmLedShiftBits = 0;
 unsigned long lastFixCount = 0;
 bool sdcard_active = false;
 bool can_active = false;
 bool major_fail = true;
-unsigned long time_lap, start_time = millis();
+//unsigned long time_lap, start_time = millis();
+byte rpmCnt;
+byte canQuiet;
+#define pause_ms 30
 
 void setup() {
 	pinMode(RED_LED, OUTPUT);
@@ -30,10 +35,19 @@ void setup() {
 	pinMode(RPM_LATCH_PIN, OUTPUT);
 	pinMode(RPM_CLOCK_PIN, OUTPUT);
 	pinMode(RPM_DATA_PIN, OUTPUT);
-	writeRPMLedShiftBits();
-	// setup Timer0 for LED status
-	OCR0A = 0xAF;
-	TIMSK0 |= _BV(OCIE0A);
+	// strobe up and back
+	for (int j = 0; j < 8; j++) {
+		enableRPMLed(j, true);
+		writeRPMLedShiftBits();
+		delay(pause_ms);
+	}
+	delay(pause_ms*3);
+
+	for (int j = 8; j > 0; j--) {
+		enableRPMLed(j-1, false);
+		writeRPMLedShiftBits();
+		delay(pause_ms);
+	}
 
     D(debugSerial.begin(115200);)
 	D(debugSerial.println(F("setup"));)
@@ -75,25 +89,19 @@ void setup() {
     major_fail = false;
 }
 
-// Interrupt is called once a millisecond,
-SIGNAL(TIMER0_COMPA_vect)
-{
-	if (!major_fail) return;
-
-	if (redLedMetro.check() == 1) {
-		redLedMetro.reset();
-		int state = digitalRead(RED_LED);
-		if (state)
-			state = LOW;
-		else
-			state = HIGH;
-		digitalWrite(RED_LED, state);
+void loop() {
+	if (major_fail) {
+		if (redLedMetro.check()) {
+			redLedMetro.reset();
+			int state = digitalRead(RED_LED);
+			if (state)
+				state = LOW;
+			else
+				state = HIGH;
+			digitalWrite(RED_LED, state);
+		}
+		return;
 	}
-}
-
-void loop()
-{
-	if (major_fail) return;
 
 	if (sdcard_active && digitalRead(LOG_SW_PIN) == LOW) {
 		if (logfile && logfile.isOpen()) {
@@ -111,7 +119,7 @@ void loop()
 		return;
 	}
 
-	grabGPSData(10);
+	grabGPSData(5);
 
 	digitalWrite(GREEN_LED, LOW);
 
@@ -164,68 +172,76 @@ void loop()
 		logfile.print('\t');
 		dtostrf(gps.speed.kmph(), 6, 1, outstr);
 		logfile.println(outstr);
-
-		logfile.flush();
 	}
 
 	digitalWrite(RED_LED, LOW);
 	if (can_active && CAN_MSGAVAIL == CAN.checkReceive()) {
+		canQuiet = 50;
 		unsigned char can_len = 0;
 		unsigned char can_buf[8];
 		unsigned long can_id;
 		CAN.readMsgBufID(&can_id,&can_len, can_buf);
 		if (ms.process(can_id, can_buf))
 			digitalWrite(RED_LED, HIGH);
+	} else {
+		if (canQuiet < 1) {
+			canQuiet = 0;
+			ms.zeroData();
+		} else {
+			canQuiet--;
+		}
 	}
 
-	time_lap = millis() - start_time;
-	if (time_lap > 30) {
-		start_time = millis();
-		checkRPMLimits();
-		D(debugLoop());
-	}
+	D(if (debugMetro.check()) debugLoop());
+
+	if (rpmMetro.check()) checkRPMLimits();
 }
 
 void debugLoop() {
-
-		int mem = freeMemory();
-		int fix = gps.sentencesWithFix()-lastFixCount;
-		lastFixCount = gps.sentencesWithFix();
-		debugSerial.printf(F("%dB free | %d/s gps fix\r\n"),mem,fix);
+	debugMetro.reset();
+	int mem = freeMemory();
+	int fix = gps.sentencesWithFix()-lastFixCount;
+	unsigned int rpm = ms.getData().RPM;
+	lastFixCount = gps.sentencesWithFix();
+	debugSerial.printf(F("%dB free | %d/s gps fix | %d rpm\r\n"),mem,fix,rpm);
 }
+
 void checkRPMLimits() {
-	if (ms.getData().RPM < RPM_ACTIVE_VALUE) {
-		if (RPMLedShiftBits == 0) {
+	rpmMetro.reset();
+	uint16_t rpm = ms.getData().RPM;
+	if (rpm < RPM_ACTIVE_VALUE) {
+		if (rpmLedShiftBits == 0) {
 			return;
 		} else {
-			RPMLedShiftBits = 0;
+			rpmLedShiftBits = 0;
 			writeRPMLedShiftBits();
 			return;
 		}
 	}
-	uint16_t rpm = ms.getData().RPM;
+	if (rpm > RPM_FLASH_VALUE && rpmLedShiftBits !=0) {
+		rpmLedShiftBits = 0;
+		writeRPMLedShiftBits();
+		return;
+	}
 	byte ledNum = 0;
-	for (int limit = RPM_ACTIVE_VALUE; limit < RPM_MAX_LIMIT; limit+=RPM_LIMIT_STEPS) {
+	for (uint16_t limit = RPM_ACTIVE_VALUE; limit < RPM_MAX_LIMIT; limit+=RPM_LIMIT_STEPS) {
 		enableRPMLed(ledNum, rpm > limit);
 		ledNum++;
-	}
-	if (rpm > RPM_FLASH_VALUE) {
-		RPMLedShiftBits ^= 0xffF;
 	}
 	writeRPMLedShiftBits();
 }
 
 void writeRPMLedShiftBits() {
 	digitalWrite(RPM_LATCH_PIN, LOW);
-	shiftOut(RPM_DATA_PIN, RPM_CLOCK_PIN, LSBFIRST, RPMLedShiftBits);
+	shiftOut(RPM_DATA_PIN, RPM_CLOCK_PIN, LSBFIRST, rpmLedShiftBits);
 	digitalWrite(RPM_LATCH_PIN, HIGH);
 }
 
 void enableRPMLed(int led, bool enable) {
 	if (enable)
-		RPMLedShiftBits |= (1UL << (led));
+		rpmLedShiftBits |= (1UL << (led));
 	else
-		RPMLedShiftBits &= ~(1UL << (led));
+		rpmLedShiftBits &= ~(1UL << (led));
 }
 
 void grabGPSData(unsigned long duration) {
@@ -241,7 +257,6 @@ void grabGPSData(unsigned long duration) {
 }
 
 bool startLogFile() {
-
 	if (logfile && logfile.isOpen()) {
 		logfile.close();
 	}
@@ -345,22 +360,27 @@ bool setupBt() {
 }
 #endif
 
+
 bool setupGps() {
 	D(debugSerial.println(F(">Gps"));)
 
+#ifdef USE_BT_GPS_DEVICE
 	gps_serial.begin(38400);
-
+#else
+	gps_serial.begin(9600);
+	gps_serial.println(F("$PMTK251,38400*27"));
+	gps_serial.begin(38400);
+#endif
 	while (gps_serial.available()) gps_serial.read();
 	/***use to calc checksum >> http://www.hhhh.org/wiml/proj/nmeaxor.html    **/
 
 	// switch to 9600 baud
-	gps_serial.println(F("$PMTK251,9600*17"));
-	/*
+	// gps_serial.println(F("$PMTK251,9600*17"));
 	// switch to 38400 baud
-	gps_serial.println(F("$PMTK251,38400*27"));
+	// gps_serial.println(F("$PMTK251,38400*27"));
 	// switch to 14400 baud
-	gps_serial.println(F("$PMTK251,14400*29"));
-	*/
+	// gps_serial.println(F("$PMTK251,14400*29"));
+
 	// turn on DGPS with WAAS mode
 	gps_serial.println(F("$PMTK301,2*2E"));
 	// turn off all but $GPRMC and $GPGGA
@@ -368,8 +388,9 @@ bool setupGps() {
 	// set update rate at 100ms = 10Hz
 	gps_serial.println(F("$PMTK220,100*2F"));
 	// set pos fix rate at 100ms = 10Hz
-	gps_serial.println(F("$PMTK300,100*2C"));
-
+//	gps_serial.println(F("$PMTK300,100*2C"));
+	// set pos fix rate at 200ms = 5Hz
+	gps_serial.println(F("$PMTK300,200*2F"));
 
 	return true;
 }

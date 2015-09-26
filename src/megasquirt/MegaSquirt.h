@@ -78,6 +78,7 @@ class MegaSquirt {
 public:
 	MegaSquirt();
 	bool process(unsigned long id, unsigned char buf[]);
+	void zeroData();
 	MSVars getData();
 
 private:

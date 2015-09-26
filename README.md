@@ -19,23 +19,28 @@ The Arduino board actually used is the freetronics Eleven (100% Uno) - we've the
 **Pins used:**
 * D0 DB9 Hardware Serial RX - DEBUG 
 * D1 DB9 Hardware Serial TX - DEBUG 
-* D2 Bluetooth - RX  
-* D3 Bluetooth - TX
-* D4 SPI SS - SD Card
+* D2 -  
+* D3 -
+* D4 -
 * D5 LOG on/off switch
-* D6 Bluetooth - RESET (*see below) 
-* D7 Bluetooth - Command Mode / PIO11 (*see below)
-* D8 -
+* D6 - 
+* D7 GPS - RX
+* D8 GPS - TX
 * D9 SPI SS - CAN Shield
-* D10 -
-* D11 - SPI MOSI
-* D12 - SPI MISO
-* D13 - SPI SCK
-* A0 RED Status LED
-* A1 GREEN Status LED
-* A2 -
-* A3 -
-* A4 -
+* D10 SPI SS - SD Card
+* D11 SPI MOSI
+* D12 SPI MISO
+* D13 SPI SCK
+* A0 RED LED
+* A1 GREEN LED
+* A2 RPM DATA PIN
+* A3 RPM LATCH PIN
+* A4 RPM CLOCK PIN
 * A5 -
+
+* D2 [Bluetooth - RX]  
+* D3 [Bluetooth - TX]
+* D6 [Bluetooth - RESET (*see below)] 
+* D7 [Bluetooth - Command Mode / PIO11 (*see below)]
 
 *Note: The Linksprite Bluetooth Shield for Arduino did not come with support for pins for reset or AT command mode enabling, so I wired these to set pins on the shield. This enables going into and out of AT command mode so that you can control the bluetooth module via software.*

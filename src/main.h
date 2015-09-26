@@ -12,7 +12,7 @@
 #include <MemoryFree.h>
 #include <TinyGPS++.h>
 #include <SdFat.h>
-#include <SoftwareSerial.h>
+#include <BigbufSoftwareSerial.h>
 #include <mcp_can.h>
 
 #define RPM_ACTIVE_VALUE RPM_MAX_LIMIT-(RPM_LIMIT_STEPS*8)

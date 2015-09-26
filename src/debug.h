@@ -15,6 +15,7 @@
  */
 
 #ifdef DEBUG_USE_SOFTSERIAL
+	//// the following must be in an impl file  D(SoftwareSerial* debugSerial;)
 	#include <SoftwareSerial.h>
 	extern SoftwareSerial debugSerial;
 #else
@@ -23,7 +24,6 @@
 //#define ENABLE_DEBUG // comment out this line to disable
 
 #ifdef ENABLE_DEBUG
-	//// the following must be in an impl file  D(SoftwareSerial* debugSerial;)
 	#define D(x) x
 	#define UN_D(y)
 #else
