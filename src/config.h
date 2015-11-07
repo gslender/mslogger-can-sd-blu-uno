@@ -16,15 +16,15 @@
 
 #define RED_LED 		A0
 #define GREEN_LED 		A1
-#define RPM_DATA_PIN	A2
-#define RPM_LATCH_PIN	A3
-#define RPM_CLOCK_PIN	A4
+#define RPM_DATA_PIN	A4
+#define RPM_LATCH_PIN	A5
+#define RPM_CLOCK_PIN	A3
 
 /* The following parameter enables Bluetooth shield and aims to connect
  * to the device address below. Comment out to use the
  * Adafruit Ultimate GPS Logger Shield
  * */
-//#define USE_BT_GPS_DEVICE
+#define USE_BT_GPS_DEVICE
 
 
 /* The following parameter is the BT address of the GPS device.
@@ -38,7 +38,7 @@
 /* Debugging is globally enabled/disabled via this definition.
  * Comment out to remove all Serial print statements
  * */
-#define ENABLE_DEBUG
+//#define ENABLE_DEBUG
 
 
 /* Timezone offset from UTC.

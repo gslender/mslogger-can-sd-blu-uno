@@ -197,7 +197,7 @@ void loop() {
 }
 
 void debugLoop() {
-	debugMetro.reset();
+	D(debugMetro.reset());
 	int mem = freeMemory();
 	int fix = gps.sentencesWithFix()-lastFixCount;
 	unsigned int rpm = ms.getData().RPM;
@@ -231,9 +231,9 @@ void checkRPMLimits() {
 }
 
 void writeRPMLedShiftBits() {
-	digitalWrite(RPM_LATCH_PIN, LOW);
-	shiftOut(RPM_DATA_PIN, RPM_CLOCK_PIN, LSBFIRST, rpmLedShiftBits);
 	digitalWrite(RPM_LATCH_PIN, HIGH);
+	shiftOut(RPM_DATA_PIN, RPM_CLOCK_PIN, LSBFIRST, rpmLedShiftBits);
+	digitalWrite(RPM_LATCH_PIN, LOW);
 }
 
 void enableRPMLed(int led, bool enable) {
